@@ -87,36 +87,35 @@
   .grid .card p{margin:0; font-size:12px; color:var(--muted)}
   a{color:var(--accent2)}
   footer{color:var(--muted); font-size:12px; text-align:center; padding:20px; border-top:1px solid var(--line); margin-top:30px}
-  #chatLog{display:flex; flex-direction:column; gap:10px; max-height:58vh; overflow-y:auto; scroll-behavior:smooth}
-  .chat{max-width:92%; padding:10px 13px; border-radius:14px; font-size:14px; line-height:1.45; white-space:pre-wrap}
-  .chat.u{align-self:flex-end; background:var(--accent); color:#141414; font-weight:600; border-radius:14px 4px 14px 14px}
-  .chat.b{align-self:flex-start; background:var(--card); border:1px solid var(--line); width:100%; border-radius:4px 14px 14px 14px}
+  .chatbox{background:var(--card); border:1px solid var(--line); border-radius:18px; overflow:hidden; margin-top:14px; box-shadow:0 6px 24px rgba(0,0,0,.35)}
+  .chead{display:flex; align-items:center; gap:8px; padding:12px 16px; font-size:12px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); border-bottom:1px solid var(--line); background:rgba(255,255,255,.02)}
+  .cdot{width:8px; height:8px; border-radius:50%; background:#39d98a; flex:none; animation:pulse 2s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(57,217,138,.4)}70%{box-shadow:0 0 0 7px rgba(57,217,138,0)}100%{box-shadow:0 0 0 0 rgba(57,217,138,0)}}
+  #chatLog{display:flex; flex-direction:column; gap:10px; max-height:50vh; overflow-y:auto; scroll-behavior:smooth; padding:16px 14px}
+  .chat{max-width:88%; padding:10px 14px; border-radius:16px; font-size:14.5px; line-height:1.5; white-space:pre-wrap}
+  .chat.u{align-self:flex-end; background:linear-gradient(135deg, var(--accent), #ffbd4f); color:#141414; font-weight:600; border-radius:16px 16px 4px 16px; box-shadow:0 2px 10px rgba(245,166,35,.22)}
+  .chat.b{align-self:flex-start; background:rgba(255,255,255,.035); border:1px solid var(--line); width:100%; max-width:100%; border-radius:16px 16px 16px 4px}
   .chat.b h4{margin:2px 0 6px; font-size:14px; color:var(--accent)}
   .chat.b p{margin:6px 0}
-  .chat.b .go{margin:10px 0 2px}
   .go{display:inline-block; background:transparent; border:1px solid var(--accent2); color:var(--accent2); border-radius:10px; padding:7px 12px; font-size:13px; font-weight:600; cursor:pointer}
   .go:active{background:var(--accent2); color:#fff}
-  .more{margin-top:10px; padding-top:10px; border-top:1px dashed var(--line); opacity:.9}
+  .more{margin-top:10px; padding-top:10px; border-top:1px dashed var(--line); opacity:.92}
   .more h4{color:var(--accent2); margin:0 0 6px; font-size:13px}
-  .chips{display:flex; flex-wrap:wrap; gap:8px; margin:10px 0}
-  .chips button{background:var(--card); border:1px solid var(--line); color:var(--text); border-radius:999px; padding:7px 12px; font-size:13px; cursor:pointer}
-  .chips button:active{border-color:var(--accent); color:var(--accent)}
-  .inrow{display:flex; gap:8px; margin:10px 0 0}
-  .inrow .search{flex:1; margin:0; width:auto}
-  .send{min-width:46px; border:1px solid var(--accent); background:var(--accent); color:#141414; border-radius:10px; font-size:17px; font-weight:700; cursor:pointer}
-  .send:active{opacity:.75}
+  .chips{display:flex; flex-wrap:wrap; gap:8px; margin:12px 2px 0}
+  .chips button{background:rgba(255,255,255,.03); border:1px solid var(--line); color:var(--text); border-radius:999px; padding:7px 13px; font-size:13px; cursor:pointer}
+  .chips button:active{border-color:var(--accent); color:var(--accent); background:rgba(245,166,35,.08)}
+  .inbar{display:flex; align-items:center; gap:8px; margin:12px; background:rgba(255,255,255,.04); border:1px solid var(--line); border-radius:999px; padding:5px 5px 5px 16px}
+  .inbar:focus-within{border-color:var(--accent)}
+  .inbar input{flex:1; background:transparent; border:none; outline:none; color:var(--text); font-size:15px; padding:8px 0; min-width:0}
+  .inbar input::placeholder{color:var(--muted)}
+  .send{flex:none; width:40px; height:40px; border:none; border-radius:50%; background:linear-gradient(135deg, var(--accent), #ffbd4f); color:#141414; font-size:16px; font-weight:700; cursor:pointer; display:grid; place-items:center; box-shadow:0 2px 10px rgba(245,166,35,.3)}
+  .send:active{opacity:.75; transform:scale(.95)}
   .typing{display:flex; gap:5px; padding:4px 0}
   .typing span{width:7px; height:7px; background:var(--muted); border-radius:50%; opacity:.35; animation:tp 1s infinite}
   .typing span:nth-child(2){animation-delay:.2s}
   .typing span:nth-child(3){animation-delay:.4s}
   @keyframes tp{0%,100%{opacity:.2}50%{opacity:.9}}
-  .fab{position:fixed; right:14px; bottom:16px; z-index:60; width:54px; height:54px; border-radius:50%; border:none; background:var(--accent); color:#141414; font-size:24px; box-shadow:0 4px 14px rgba(0,0,0,.55); cursor:pointer; display:none}
-  .fab.on{display:block}
   .easy{background:rgba(79,140,255,.14); border:1px solid rgba(79,140,255,.4); color:#a9c6ff; border-radius:10px; padding:9px 11px; font-size:13px; line-height:1.5; margin:2px 0 6px}
-  .aimode{font-size:13px; margin-top:10px}
-  .aimode label{display:inline-flex; align-items:center; gap:6px; cursor:pointer; font-weight:600}
-  .aimode input{accent-color:var(--accent); width:16px; height:16px; margin:0}
-  .aimsub{display:block; color:var(--muted); font-size:12px; margin-top:2px}
   .gloss{margin-top:10px; padding:9px 11px; border-left:3px solid var(--accent); background:rgba(245,166,35,.08); border-radius:8px; font-size:13px; color:var(--muted); line-height:1.5}
   .newdlg{margin:14px auto 0; width:max-content; color:var(--muted); font-size:13px; cursor:pointer; border:1px solid var(--line); border-radius:999px; padding:7px 14px}
   .newdlg:active{color:var(--accent); border-color:var(--accent)}
@@ -309,15 +308,14 @@
 </section>
 
 <section class="view" id="v-ai">
-  <p class="lead">Помощник двухрежимный. Включена галочка 🧠 Нейросеть (по умолчанию) — на любой твой вопрос отвечает живая нейросеть через интернет, простым человеческим языком, по шагам. Выключена — работает офлайн-поиск: я анализирую любые слова из вопроса, ищу по всему руководству (кнопки, режимы, сценарии, словарь, звуки, стили), отвечаю по-простому и сам расшифровываю непонятные английские термины. Если нейросеть недоступна, офлайн-режим включится автоматически.</p>
-  <div class="card" id="chatLog"></div>
-  <div class="aimode">
-    <label><input type="checkbox" id="aiNet" checked> &#129504; Нейросеть (нужен интернет)</label>
-    <span class="aimsub">выключено — офлайн-поиск по руководству; нейросеть: 4 быстрых сервера + сеть без цензуры (займёт до 2–3 мин)</span>
-  </div>
-  <div class="inrow">
-    <input class="search" id="chatInput" type="search" autocomplete="off" placeholder="Спроси что угодно, своими словами…">
-    <button id="sendBtn" class="send" type="button">&#10148;</button>
+  <p class="lead">Спрашивай о чём угодно своими словами — отвечает нейросеть на 117 млрд параметров. Приложение само выбирает самый свободный из пяти бесплатных серверов, ответ печатается по мере генерации. Совсем без интернета помощник переключается на встроенный поиск по руководству.</p>
+  <div class="chatbox">
+    <div class="chead"><span class="cdot"></span> ИИ-помощник &middot; Korg iS35</div>
+    <div id="chatLog"></div>
+    <div class="inbar">
+      <input id="chatInput" type="search" autocomplete="off" placeholder="Спроси что угодно, своими словами…">
+      <button id="sendBtn" class="send" type="button">&#10148;</button>
+    </div>
   </div>
   <div class="chips" id="chips"></div>
   <div class="newdlg" id="newDlg">&#10226; Новый диалог</div>
@@ -781,7 +779,6 @@ const chatLog = document.getElementById("chatLog");
 const chatInput = document.getElementById("chatInput");
 const chips = document.getElementById("chips");
 const fab = document.getElementById("fab");
-const aiNet = document.getElementById("aiNet");
 
 const norm = s => String(s).toLowerCase().replace(/ё/g, "е").replace(/[^a-zа-я0-9\s-]/g, " ").replace(/\s+/g, " ").trim();
 const STOP = new Set(["как","что","это","где","мне","меня","мой","мои","моя","твой","для","чтобы","почему","потому","который","когда","такой","такое","там","есть","быть","если","или","очень","просто","значит","хочу","нужен","нужно","надо","сделать","сначала","пожалуйста","объясни","подскажи","музыка","и","а","но","на","в","у","же","бы","ли","то"]);
@@ -1024,7 +1021,7 @@ function smallTalk(q){
   const n = norm(q);
   if (/^(привет|здравств|хай|ку |доброе|добрый|здоров)/.test(n)) return "Привет! Спрашивай что угодно своими словами — я поищу по всему руководству и объясню просто: «не слышно клавиш», «хочу записать песню», «что значит Write»…";
   if (/с?пасибо|благодар|класс|круто|спс/.test(n)) return "Всегда рад! Заглядывай ещё — по iS35 вопросов не бывает глупых.";
-  if (/^(ты кто|кто ты|ты робот|ты ии|как тебя зовут)/.test(n)) return "Я помощник внутри этого приложения. Живу прямо здесь, в телефоне, работаю без интернета и знаю всё содержимое этого руководства по iS35 — ищу по нему любые слова, которые ты напишешь.";
+  if (/^(ты кто|кто ты|ты робот|ты ии|как тебя зовут)/.test(n)) return "Я нейросеть, живущая внутри этого приложения-гида. Работаю через пять бесплатных серверов и знаю всю базу руководства по iS35 — могу объяснить любую тему просто и по шагам.";
   return null;
 }
 
@@ -1180,7 +1177,7 @@ function botAnswer(q){
     setTimeout(() => { bubble.innerHTML = small; suggest(); chatLog.scrollTop = chatLog.scrollHeight; }, 420);
     return;
   }
-  const useNet = aiNet && aiNet.checked && navigator.onLine;
+  const useNet = !!navigator.onLine;
   if (useNet){
     askNet(q, txt => {
       bubble.innerHTML = fmtNet(txt);
@@ -1217,7 +1214,7 @@ function ask(q){
 }
 
 function greet(){
-  chatLog.appendChild(el("div", {class:"chat b"}, "Привет! Я помощник по iS35. Включена галочка 🧠 Нейросеть — тогда я отвечаю на любой вопрос живым нейрочеловеком, простым языком (нужен интернет). Выключишь галочку — работаю сам, без интернета, ищу по всему руководству. Пиши любыми словами: «нет звука», «не сохраняется», «что значит Write», «где рояль», «как playback с дискеты» — или спроси про что угодно."));
+  chatLog.appendChild(el("div", {class:"chat b"}, "Привет! Я помощник по iS35 — живая нейросеть на 117 млрд параметров. Приложение само выбирает самый свободный из пяти бесплатных серверов, поэтому отвечаю быстро и на любую тему, своими словами. Спроси хоть «нет звука», хоть «как записать песню», хоть «что значит Write». Где-то раз в час серверы устают — тогда подхвачу офлайн-поиском по руководству."));
 }
 
 chatInput.addEventListener("keydown", e => { if (e.key === "Enter") ask(chatInput.value); });
