@@ -113,6 +113,10 @@
   .fab{position:fixed; right:14px; bottom:16px; z-index:60; width:54px; height:54px; border-radius:50%; border:none; background:var(--accent); color:#141414; font-size:24px; box-shadow:0 4px 14px rgba(0,0,0,.55); cursor:pointer; display:none}
   .fab.on{display:block}
   .easy{background:rgba(79,140,255,.14); border:1px solid rgba(79,140,255,.4); color:#a9c6ff; border-radius:10px; padding:9px 11px; font-size:13px; line-height:1.5; margin:2px 0 6px}
+  .aimode{font-size:13px; margin-top:10px}
+  .aimode label{display:inline-flex; align-items:center; gap:6px; cursor:pointer; font-weight:600}
+  .aimode input{accent-color:var(--accent); width:16px; height:16px; margin:0}
+  .aimsub{display:block; color:var(--muted); font-size:12px; margin-top:2px}
   .gloss{margin-top:10px; padding:9px 11px; border-left:3px solid var(--accent); background:rgba(245,166,35,.08); border-radius:8px; font-size:13px; color:var(--muted); line-height:1.5}
   .newdlg{margin:14px auto 0; width:max-content; color:var(--muted); font-size:13px; cursor:pointer; border:1px solid var(--line); border-radius:999px; padding:7px 14px}
   .newdlg:active{color:var(--accent); border-color:var(--accent)}
@@ -305,10 +309,14 @@
 </section>
 
 <section class="view" id="v-ai">
-  <p class="lead">Помощник работает как мини-поисковик: ему не нужны готовые темы — он анализирует любые слова из твоего вопроса, ищет по всему руководству (кнопки, режимы, сценарии, словарь, звуки, стили), отвечает по-простому и сам расшифровывает непонятные английские термины. Работает полностью офлайн.</p>
+  <p class="lead">Помощник двухрежимный. Включена галочка 🧠 Нейросеть (по умолчанию) — на любой твой вопрос отвечает живая нейросеть через интернет, простым человеческим языком, по шагам. Выключена — работает офлайн-поиск: я анализирую любые слова из вопроса, ищу по всему руководству (кнопки, режимы, сценарии, словарь, звуки, стили), отвечаю по-простому и сам расшифровываю непонятные английские термины. Если нейросеть недоступна, офлайн-режим включится автоматически.</p>
   <div class="card" id="chatLog"></div>
+  <div class="aimode">
+    <label><input type="checkbox" id="aiNet" checked> &#129504; Нейросеть (нужен интернет)</label>
+    <span class="aimsub">выключено — работает офлайн-поиск по руководству</span>
+  </div>
   <div class="inrow">
-    <input class="search" id="chatInput" type="search" autocomplete="off" placeholder="Спроси что-нибудь про iS35…">
+    <input class="search" id="chatInput" type="search" autocomplete="off" placeholder="Спроси что угодно, своими словами…">
     <button id="sendBtn" class="send" type="button">&#10148;</button>
   </div>
   <div class="chips" id="chips"></div>
@@ -773,6 +781,7 @@ const chatLog = document.getElementById("chatLog");
 const chatInput = document.getElementById("chatInput");
 const chips = document.getElementById("chips");
 const fab = document.getElementById("fab");
+const aiNet = document.getElementById("aiNet");
 
 const norm = s => String(s).toLowerCase().replace(/ё/g, "е").replace(/[^a-zа-я0-9\s-]/g, " ").replace(/\s+/g, " ").trim();
 const STOP = new Set(["как","что","это","где","мне","меня","мой","мои","моя","твой","для","чтобы","почему","потому","который","когда","такой","такое","там","есть","быть","если","или","очень","просто","значит","хочу","нужен","нужно","надо","сделать","сначала","пожалуйста","объясни","подскажи","музыка","и","а","но","на","в","у","же","бы","ли","то"]);
@@ -1031,21 +1040,76 @@ function renderAnswer(bubble, hits){
 
 const NOANSWER = "В том, что ты написал, я не нашёл знакомых слов во всём руководстве. Опиши по-человечески: что хочешь сделать или что сломалось — например «хочу записать песню», «не слышно клавиш», «звук тусклый», «стирается при выключении». Если и это не найдётся — напиши мне, добавлю ответ в базу.";
 
+const NETSYS = "Ты дружелюбный помощник из приложения-гида по синтезатору Korg iS35 — интерактивная рабочая станция конца 1990-х: автоаккомпанемент, дискеты 3.5 дюйма 2DD/HD MS-DOS, 384 программы (банки A–F), 128(factory)+16(user) стилей, 61 клавиша, режимы ARR.PLAY, BACKING SEQUENCE, SONG PLAY, SONG EDIT, PROGRAM, DISK/GLOBAL. Отвечай по-русски очень просто, как человеку без опыта: нумеруй шаги (1), (2), (3), поясняй любой термин своими словами, не используй профессиональный жаргон без расшифровки. Не выдумывай несуществующие кнопки или пункты меню — если не уверен, так и скажи и предложи общий путь. Если вопрос не про синтезатор — ответь коротко и дружелюбно, а потом предложи спросить что-нибудь про iS35.";
+
+function fmtNet(t){
+  let s = String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  s = s.replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>").replace(/\*([^*]+)\*/g, "<i>$1</i>");
+  return s;
+}
+
+let netCtrl = null;
+function askNet(q){
+  if (netCtrl) try { netCtrl.abort(); } catch(e){}
+  netCtrl = new AbortController();
+  const ok = setTimeout(() => netCtrl.abort(), 30000);
+  const pull = () => { clearTimeout(ok); netCtrl = null; };
+  return new Promise((res, rej) => {
+    const c = netCtrl;
+    fetch("https://text.pollinations.ai/openai", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({model: "openai", messages: [{role: "system", content: NETSYS}, {role: "user", content: q}]}),
+      signal: c.signal
+    }).then(r => r.status >= 200 && r.status < 300 ? r.json() : Promise.reject(r.status))
+      .then(d => {
+        const t = d && d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content;
+        if (!t) throw new Error("empty");
+        pull(); res(t);
+      })
+      .catch(() => {
+        fetch("https://text.pollinations.ai/" + encodeURIComponent("Помощник по синтезатору Korg iS35. Ответь по-русски очень просто, по шагам, без жаргона.\n\nВопрос: " + q) + "?model=openai", {signal: c.signal})
+          .then(r => r.text())
+          .then(t => {
+            if (!t || t.length < 2 || /^\s*(rate limit|error)/i.test(t)) { pull(); rej(new Error("bad")); return; }
+            pull(); res(t);
+          })
+          .catch(() => { pull(); rej(new Error("netfail")); });
+      });
+  });
+}
+
+function offlineAnswer(bubble, q){
+  const hits = searchAll(q);
+  if (hits.length) renderAnswer(bubble, hits);
+  else bubble.innerHTML = NOANSWER;
+  suggest();
+  chatLog.scrollTop = chatLog.scrollHeight;
+}
+
 function botAnswer(q){
   const bubble = el("div", {class:"chat b"}, '<div class="typing"><span></span><span></span><span></span></div>');
   chatLog.appendChild(bubble);
   chatLog.scrollTop = chatLog.scrollHeight;
-  setTimeout(() => {
-    const small = smallTalk(q);
-    if (small) bubble.innerHTML = small;
-    else {
-      const hits = searchAll(q);
-      if (hits.length) renderAnswer(bubble, hits);
-      else bubble.innerHTML = NOANSWER;
-    }
-    suggest();
-    chatLog.scrollTop = chatLog.scrollHeight;
-  }, 420);
+  const small = smallTalk(q);
+  if (small){
+    setTimeout(() => { bubble.innerHTML = small; suggest(); chatLog.scrollTop = chatLog.scrollHeight; }, 420);
+    return;
+  }
+  const useNet = aiNet && aiNet.checked && navigator.onLine;
+  if (useNet){
+    askNet(q).then(t => {
+      bubble.innerHTML = fmtNet(t);
+      suggest();
+      chatLog.scrollTop = chatLog.scrollHeight;
+    }).catch(() => {
+      offlineAnswer(bubble, q);
+      bubble.insertAdjacentHTML("beforeend", '<div class="more">Нейросеть недоступна (нет интернета или сервис не отвечает) — это ответ офлайн-поиска.</div>');
+      chatLog.scrollTop = chatLog.scrollHeight;
+    });
+    return;
+  }
+  setTimeout(() => offlineAnswer(bubble, q), 420);
 }
 
 function suggest(){
@@ -1064,7 +1128,7 @@ function ask(q){
 }
 
 function greet(){
-  chatLog.appendChild(el("div", {class:"chat b"}, "Привет! Я помощник по iS35 — живу в самом приложении и работаю без интернета. Пиши как в чат с человеком, любыми словами: «нет звука», «не сохраняется», «что значит кнопка Write», «где рояль», «как playback с дискеты». Я проанализирую слова, найду нужное место в руководстве, объясню по-простому и расшифрую непонятные термины."));
+  chatLog.appendChild(el("div", {class:"chat b"}, "Привет! Я помощник по iS35. Включена галочка 🧠 Нейросеть — тогда я отвечаю на любой вопрос живым нейрочеловеком, простым языком (нужен интернет). Выключишь галочку — работаю сам, без интернета, ищу по всему руководству. Пиши любыми словами: «нет звука», «не сохраняется», «что значит Write», «где рояль», «как playback с дискеты» — или спроси про что угодно."));
 }
 
 chatInput.addEventListener("keydown", e => { if (e.key === "Enter") ask(chatInput.value); });
