@@ -313,7 +313,7 @@
   <div class="card" id="chatLog"></div>
   <div class="aimode">
     <label><input type="checkbox" id="aiNet" checked> &#129504; Нейросеть (нужен интернет)</label>
-    <span class="aimsub">выключено — офлайн-поиск по руководству; нейросеть: 4 бесплатных сервера (модели 117 млрд параметров)</span>
+    <span class="aimsub">выключено — офлайн-поиск по руководству; нейросеть: 4 быстрых сервера + сеть без цензуры (займёт до 2–3 мин)</span>
   </div>
   <div class="inrow">
     <input class="search" id="chatInput" type="search" autocomplete="off" placeholder="Спроси что угодно, своими словами…">
@@ -1107,8 +1107,13 @@ function askNet(q, onChunk){
   return new Promise(res => {
     const log = [];
     const finish = t => { netLog = log.join(", "); pull(); res(t); };
+    const runHorde = () => {
+      clearTimeout(ok);
+      const ok2 = setTimeout(() => finish(null), 170000);
+      hordeAsk(q, () => { clearTimeout(ok2); finish(null); }, t => { clearTimeout(ok2); finish(t); });
+    };
     const run1 = k => {
-      if (k >= PROVS.length){ finish(null); return; }
+      if (k >= PROVS.length){ runHorde(); return; }
       const pv = PROVS[k];
       if (Date.now() < (provNext[pv.n] || 0)){ log.push(pv.n + ":пауза"); run1(k + 1); return; }
       postChat(pv.u, pv.m, q, onChunk).then(t => {
@@ -1121,6 +1126,41 @@ function askNet(q, onChunk){
     };
     run1(0);
   });
+}
+
+function hordeAsk(q, bad, good){
+  let over = false;
+  const end = (fn, arg) => { if (!over){ over = true; fn(arg); } };
+  fetch("https://aihorde.net/api/v2/status/models?type=text")
+    .then(r => r.json())
+    .then(list => {
+      const best = (Array.isArray(list) ? list : []).filter(o => /heretic|uncensored|Stheno|Skyfall|Behemoth/i.test(o.name) && o.count > 0 && o.eta < 90)
+        .sort((a, b) => (b.count - a.count) || (a.eta - b.eta));
+      const models = best.slice(0, 2).map(o => o.name);
+      const body = {prompt: NETSYS + "\n\nВопрос пользователя: " + q + "\nОтветь по-русски, только сам ответ:", params: {max_length: 512, max_context_length: 2048}};
+      if (models.length) body.models = models;
+      return fetch("https://aihorde.net/api/v2/generate/text/async", {
+        method: "POST",
+        headers: {"Content-Type": "application/json", "Client-Agent": "korg-is35-guide:1.0:anon"},
+        body: JSON.stringify(body)
+      });
+    })
+    .then(r => r.ok ? r.json() : Promise.reject("horde-busy"))
+    .then(j => {
+      if (!j || !j.id) throw "horde-busy";
+      const poll = n => {
+        if (n > 40) throw "horde-slow";
+        fetch("https://aihorde.net/api/v2/generate/text/status/" + j.id)
+          .then(r => r.json())
+          .then(st => {
+            if (st && st.generations && st.generations.length && st.generations[0].text){ end(good, st.generations[0].text); return; }
+            if (st && st.faulted) throw "horde-fault";
+            setTimeout(() => poll(n + 1), 4000);
+          }).catch(e => { throw e; });
+      };
+      poll(0);
+    })
+    .catch(() => end(bad));
 }
 
 function offlineAnswer(bubble, q){
