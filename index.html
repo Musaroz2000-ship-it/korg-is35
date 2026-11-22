@@ -313,7 +313,7 @@
   <div class="card" id="chatLog"></div>
   <div class="aimode">
     <label><input type="checkbox" id="aiNet" checked> &#129504; Нейросеть (нужен интернет)</label>
-    <span class="aimsub">выключено — офлайн-поиск по руководству; у нейросети лимит: 1 вопрос в 45 сек</span>
+    <span class="aimsub">выключено — офлайн-поиск по руководству; нейросеть: большая модель 117 млрд параметров + запасной сервер</span>
   </div>
   <div class="inrow">
     <input class="search" id="chatInput" type="search" autocomplete="off" placeholder="Спроси что угодно, своими словами…">
@@ -1049,7 +1049,7 @@ function fmtNet(t){
 }
 
 let netCtrl = null;
-let netNext = 0;
+let brNext = 0, netNext = 0;
 
 function readSSE(r, onChunk){
   const dec = new TextDecoder();
@@ -1077,42 +1077,49 @@ function readSSE(r, onChunk){
   });
 }
 
+function postChat(url, model, q, onChunk){
+  const body = {messages: [{role: "system", content: NETSYS}, {role: "user", content: q}], stream: true};
+  if (model) body.model = model;
+  return fetch(url, {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body), signal: netCtrl.signal})
+    .then(r => {
+      if (r.status === 402 || r.status === 429) throw "busy";
+      if (r.status < 200 || r.status >= 300 || !r.body) throw "fail";
+      return readSSE(r, onChunk);
+    }).then(out => {
+      if (!out || !out.trim()) throw "fail";
+      return out;
+    });
+}
+
 function askNet(q, onChunk){
   if (netCtrl) try { netCtrl.abort(); } catch(e){}
   netCtrl = new AbortController();
   const ok = setTimeout(() => netCtrl.abort(), 60000);
   const pull = () => { clearTimeout(ok); netCtrl = null; };
   return new Promise(res => {
-    const c = netCtrl;
-    fetch("https://text.pollinations.ai/openai", {
-      method: "POST",
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({messages: [{role: "system", content: NETSYS}, {role: "user", content: q}], stream: true}),
-      signal: c.signal
-    }).then(r => {
-      if (r.status === 402 || r.status === 429){ netNext = Date.now() + 46000; return Promise.reject("busy"); }
-      if (r.status < 200 || r.status >= 300 || !r.body) return Promise.reject("fail");
-      return readSSE(r, onChunk);
-    }).then(out => {
-      if (!out || !out.trim()) return Promise.reject("fail");
-      netNext = Date.now() + 46000;
-      pull(); res(out);
-    }).catch(reason => {
-      if (reason === "busy"){ pull(); res(null); return; }
-      fetch("https://text.pollinations.ai/" + encodeURIComponent(q) + "?system=" + encodeURIComponent(NETSYS), {signal: c.signal})
-        .then(r => {
-          if (r.status === 402 || r.status === 429){ netNext = Date.now() + 46000; pull(); res(null); return Promise.reject("stop"); }
-          if (r.status < 200 || r.status >= 300) return Promise.reject("fail");
-          return r.text();
-        }).then(t => {
-          if (!t || t.length < 2 || /^\s*(rate limit|error|payment|not found|40\d)/i.test(t)) { pull(); res(null); return; }
-          netNext = Date.now() + 46000;
-          pull(); res(t);
-        }).catch(() => {
-          if (reason === "stop") return;
-          pull(); res(null);
+    const finish = t => { pull(); res(t); };
+    const tryBr = () => {
+      postChat("https://blockrun.ai/v1/chat/completions", "openai/gpt-oss-120b", q, onChunk)
+        .then(t => { brNext = Date.now() + 5000; finish(t); })
+        .catch(reason => { brNext = Date.now() + (reason === "busy" ? 20000 : 5000); tryPol(); });
+    };
+    const tryPol = () => {
+      postChat("https://text.pollinations.ai/openai", null, q, onChunk)
+        .then(t => { netNext = Date.now() + 46000; finish(t); })
+        .catch(reason => {
+          if (reason === "busy"){ netNext = Date.now() + 46000; finish(null); return; }
+          fetch("https://text.pollinations.ai/" + encodeURIComponent(q) + "?system=" + encodeURIComponent(NETSYS), {signal: netCtrl.signal})
+            .then(r => {
+              if (r.status === 402 || r.status === 429){ netNext = Date.now() + 46000; finish(null); throw "stop"; }
+              if (r.status < 200 || r.status >= 300) throw "fail";
+              return r.text();
+            }).then(t => {
+              if (!t || t.length < 2 || /^\s*(rate limit|error|payment|not found|40\d)/i.test(t)){ netNext = Date.now() + 46000; finish(null); return; }
+              netNext = Date.now() + 46000; finish(t);
+            }).catch(() => finish(null));
         });
-    });
+    };
+    if (Date.now() < brNext) tryPol(); else tryBr();
   });
 }
 
@@ -1135,20 +1142,13 @@ function botAnswer(q){
   }
   const useNet = aiNet && aiNet.checked && navigator.onLine;
   if (useNet){
-    if (Date.now() < netNext - 8000){
-      const s = Math.max(1, Math.ceil((netNext - Date.now()) / 1000));
-      offlineAnswer(bubble, q);
-      bubble.insertAdjacentHTML("beforeend", '<div class="more">Нейросеть отвечает не чаще одного раза в 45 секунд — таков лимит бесплатного сервиса. Это ответ офлайн-поиска; нейросеть снова сможет ответить примерно через ' + s + ' сек.</div>');
-      chatLog.scrollTop = chatLog.scrollHeight;
-      return;
-    }
     askNet(q, txt => {
       bubble.innerHTML = fmtNet(txt);
       chatLog.scrollTop = chatLog.scrollHeight;
     }).then(t => {
       if (!t){
         offlineAnswer(bubble, q);
-        bubble.insertAdjacentHTML("beforeend", '<div class="more">Нейросеть сейчас не ответила (либо лимит бесплатного сервиса — один вопрос в 45 секунд, либо сервис недоступен). Это ответ офлайн-поиска — попробуй нейросеть ещё раз примерно через минуту.</div>');
+        bubble.insertAdjacentHTML("beforeend", '<div class="more">Нейросети сейчас заняты или недоступны — это ответ офлайн-поиска. Попробуй спросить нейросеть ещё раз через минуту.</div>');
         chatLog.scrollTop = chatLog.scrollHeight;
         return;
       }
