@@ -87,6 +87,20 @@
   .grid .card p{margin:0; font-size:12px; color:var(--muted)}
   a{color:var(--accent2)}
   footer{color:var(--muted); font-size:12px; text-align:center; padding:20px; border-top:1px solid var(--line); margin-top:30px}
+  #chatLog{display:flex; flex-direction:column; gap:10px; max-height:62vh; overflow-y:auto}
+  .chat{max-width:92%; padding:10px 13px; border-radius:14px; font-size:14px; line-height:1.45; white-space:pre-wrap}
+  .chat.u{align-self:flex-end; background:var(--accent); color:#141414; font-weight:600}
+  .chat.b{align-self:flex-start; background:var(--card); border:1px solid var(--line); width:100%}
+  .chat.b h4{margin:2px 0 6px; font-size:14px; color:var(--accent)}
+  .chat.b p{margin:6px 0}
+  .chat.b .go{margin:10px 0 2px}
+  .go{display:inline-block; background:transparent; border:1px solid var(--accent2); color:var(--accent2); border-radius:10px; padding:7px 12px; font-size:13px; font-weight:600; cursor:pointer}
+  .go:active{background:var(--accent2); color:#fff}
+  .more{margin-top:10px; padding-top:10px; border-top:1px dashed var(--line); opacity:.85}
+  .more h4{color:var(--accent2)}
+  .chips{display:flex; flex-wrap:wrap; gap:8px; margin:10px 0}
+  .chips button{background:var(--card); border:1px solid var(--line); color:var(--text); border-radius:999px; padding:7px 12px; font-size:13px; cursor:pointer}
+  .chips button:active{border-color:var(--accent); color:var(--accent)}
 </style>
 </head>
 <body>
@@ -104,6 +118,7 @@
   <button data-v="ref">Звуки · Стили</button>
   <button data-v="disk">Дискета</button>
   <button data-v="info">О синте</button>
+  <button data-v="ai">ИИ</button>
 </nav>
 
 <main>
@@ -272,6 +287,13 @@
       <li><a href="https://www.manualslib.com/manual/721616/Korg-Is35.html">Полный мануал онлайн (249 стр.)</a> — ManualsLib.</li>
     </ul>
   </div>
+</section>
+
+<section class="view" id="v-ai">
+  <p class="lead">Задай вопрос по-русски — помощник сам найдёт готовый ответ в базе руководства и покажет кнопку «Открыть» прямо в нужном разделе. Работает офлайн, без интернета.</p>
+  <div class="card" id="chatLog"></div>
+  <div class="chips" id="chips"></div>
+  <input class="search" id="chatInput" type="search" autocomplete="off" placeholder="Например: нет звука, как сохранить, сменить ритм…">
 </section>
 
 </main>
@@ -551,6 +573,216 @@ STYLES.forEach(([group, names], gi) => {
   styleGroups.appendChild(el("div", {}, `<h4 style="margin:10px 0 2px;color:var(--accent)">${group}</h4>
     <table><tr><th>&#8470;</th><th>Название</th></tr>${rows}</table>`));
 });
+
+/* ==================== ИИ-ПОМОЩНИК (офлайн, база знаний приложения) ==================== */
+const FAQ = [
+  {k:["нет звука","звука нет","тишина","не звучит","тихо","mute","наушники"],
+   t:"Нет звука — что проверить сначала",
+   a:"<p>1) <b>MASTER VOLUME</b> — подними вверх.</p><p>2) Дорожки не заглушены: кнопка <b>MUTE</b> в секции дорожек.</p><p>3) Что-то застряло — нажми <b>RESET</b>.</p><p>4) Провод в OUTPUT L/R и наушники (если вставлены в головные телефоны — основной выход глохнет).</p>",
+   s:"panel", f:null},
+  {k:["только барабаны","одни ударные","аккорды не распознаются","не понимаю аккорды","chord scanning"],
+   t:"Аккомпанемент играет только ритм",
+   a:"<p>Проверь <b>CHORD SCANNING</b>: должно стоять <b>LOWER</b> — тогда аккорды играются левой рукой в нижней части клавиатуры, а мелодия справа. Аккорды не берёшь — двигатель стоит, играют одни барабаны.</p>",
+   s:"howto", f:"Сыграть с автоаккомпанементом"},
+  {k:["сохранить","сохранение","стирается","память пропадает","save","выключении пропадает"],
+   t:"Как сохранять: память USER стирается при выключении",
+   a:"<p>Все твои изменения в USER (программы банка F, правки аранжировок, Keyboard Sets, Global) стираются при выключении питания.</p><p><b>Перед каждым выключением:</b> DISK/GLOBAL → Page 1 → <b>Save</b> → <b>ENTER/YES</b>. Нужна дискета MS-DOS.</p>",
+   s:"howto", f:"Сбережение данных"},
+  {k:["записать песню","запись","записать своё","backing sequence","b.seq","bsq"],
+   t:"Записать своё исполнение (Backing Sequence)",
+   a:"<p><b>B.SEQ</b> → выбери аранжировку → <b>REC/WRITE/LYRICS</b> (LED записи) → <b>SYNCHRO-START</b> или <b>START/STOP</b> → играй. Записываются и вариации, и филлы.</p><p>Важно: BSQ стирается при выключении — сохрани на дискету: DISK/GLOBAL → Page 1 → Save, слот BSQ.</p>",
+   s:"howto", f:"Backing Sequence"},
+  {k:["минусовка","караоке","midi файл","mid","song play","текст песни","lyrics"],
+   t:"Минусовка с дискеты + караоке",
+   a:"<p>Вставь дискету с .MID-файлами, нажми <b>SONG PLAY</b>, выбери песню колесом или <b>TEMPO/VALUE</b>, жми <b>START/STOP</b>.</p><p>Текст песни: <b>REC/WRITE/LYRICS</b> переключает экраны Lyrics 1 / Lyrics 2. Поддерживаются форматы M-Live, Solton, Tune 1000, Edirol, GMX, KAR, HitBit, XF.</p>",
+   s:"howto", f:"минусовку"},
+  {k:["сменить тембр","сменить звук","другой инструмент","программа","program","тембр меняется"],
+   t:"Сменить тембр (звук)",
+   a:"<p>Выбери дорожку кнопкой <b>VOLUME/PROGRAM</b> (Upper 1 / Upper 2 / Lower), затем в секции <b>PROGRAM</b> набери банк (A–F) и номер 11–88 (кнопки NUMBER 1–8).</p><p>Нужна другая высота — <b>OCTAVE +/−</b>. Upper 2 и Lower не звучат одновременно — это штатно.</p>",
+   s:"howto", f:"Сменить тембр"},
+  {k:["сплит","разделить клавиатуру","split","два инструмента на","точка разделения"],
+   t:"Разделить клавиатуру (SPLIT)",
+   a:"<p><b>KEYBOARD MODE → SPLIT</b> — слева аккомпанемент/Lower, справа мелодия.</p><p>Точка разделения: зажми <b>SPLIT POINT</b> и нажми клавишу — с неё начнётся правая часть.</p>",
+   s:"howto", f:"Наложение двух тембров"},
+  {k:["наложение","наложить","layer","двойной звук","layering","upper 1 и upper 2"],
+   t:"Наложить два тембра (Layer)",
+   a:"<p>В <b>KEYBOARD ASSIGN</b> включи одновременно <b>Upper 1 + Upper 2</b> — оба тембра будут играть вместе.</p><p>Если вся клавиатура нужна одним тембром — <b>KEYBOARD MODE → FULL UPPER</b>.</p>",
+   s:"howto", f:"Наложение двух тембров"},
+  {k:["транспонировать","тональность","transpoze","transpos","полтона","под тональность"],
+   t:"Сменить тональность (TRANSPOSE)",
+   a:"<p>Кнопки <b>TRANSPOSE − / +</b> сдвигают весь инструмент по полутонам — и аккомпанемент, и клавиатуру.</p><p>Под голос: пой и сдвигай, пока не сядет. Сдвиг по октавам без смены тональности — <b>OCTAVE</b>.</p>",
+   s:"howto", f:"Транспонировать"},
+  {k:["темп","темпо","быстрее медленнее","скорость ритма","tempo"],
+   t:"Сменить темп",
+   a:"<p><b>TEMPO/VALUE</b> (стрелки) или колесо значения.</p><p>Чтобы темп не сбрасывался при смене аранжировки — включи LED <b>TEMPO (Lock)</b>.</p>",
+   s:"panel", f:"TEMPO"},
+  {k:["fill","филл","вариация","variation","интро","окончание","intro","ending","fade"],
+   t:"Филлы, вариации, вступление и концовка",
+   a:"<p><b>FILL 1 / FILL 2</b> — сбивка внутри такта. <b>VARIATION 1–4</b> — нарастание плотности аранжировки. <b>INTRO/ENDING</b> — вступление/концовка со сменой тональности. <b>FADE</b> — плавное начало/затухание.</p>",
+   s:"panel", f:"FILL"},
+  {k:["single touch","одно касание","авто подбор тембров","сингл тач"],
+   t:"SINGLE TOUCH — тембры подбираются сами",
+   a:"<p>Включи <b>SINGLE TOUCH</b> (LED горит) — при выборе любой аранжировки iS35 сам выставит подходящие тембры клавиатуры. Классика интерактивных рабочих станций.</p>",
+   s:"panel", f:"SINGLE TOUCH"},
+  {k:["аккорд одной нотой","one finger","упрощ аккорды","chord recognition","распознав аккордов","bass inv","обращен"],
+   t:"Настроить, чтобы аккорды было легче брать",
+   a:"<p><b>DISK/GLOBAL → Page 17: Chord Recognition Mode</b>: <b>One Finger</b> — аккорд одной нотой, <b>Fingered 1/2</b> — по нотам (в Fingered 2 — минимум 3 ноты).</p><p>«Обращённые» аккорды (Am7/G, F/C) — включи <b>BASS INV</b>.</p>",
+   s:"howto", f:"аккорды распознавались"},
+  {k:["заглушить дорожку","mute дорожк","сброс","reset","залипла нота","нота не выключается","глюк"],
+   t:"Заглушить дорожку / сбросить залипшую ноту",
+   a:"<p><b>MUTE</b> — глушит дорожку.</p><p><b>RESET</b> — сброс: снимает залипшие ноты и останавливает всё. Первый инструмент при любом «глюке».</p>",
+   s:"panel", f:"RESET"},
+  {k:["микрофон","микроф","гармонайзер","вокал","голос с гармон","gtr","input"],
+   t:"Микрофон и вокал-гармони́зер",
+   a:"<p>Микрофон — в разъём <b>INPUT-IN</b>. Слайдером <b>GAIN</b> добивайся зелёного <b>SIGNAL</b> (оранжевый — перегруз).</p><p>Пресет — <b>VOC/GTR MODE</b>, переключение двух его настроек — <b>A/B</b>. Гармонайзер работает только в режиме Vocal; ноты гармонии держит <b>MEMORY-LOW/HAR</b>. Настройки запомни в Keyboard Set: <b>REC/WRITE/LYRICS → Write Keyboard Set</b>.</p>",
+   s:"howto", f:"микрофон"},
+  {k:["свой тембр","создать звук","user банк","отредактировать программу","write","rename"],
+   t:"Создать свой тембр и сохранить",
+   a:"<p>Возьми похожий тембр, нажми <b>PROGRAM</b>, правь страницы редактора: PAGE +/− (осцилляторы, VDF, VDA, вибрато, эффекты…). <b>CURSOR</b> — куда встать, <b>TEMPO/VALUE</b> — значение. Ошибка — TEMPO/VALUE + и − одновременно вернёт исходное.</p><p>Сохранение: <b>REC/WRITE/LYRICS</b> (Write) → место в банке <b>F (USER)</b> → <b>ENTER/YES</b>. Имя — страница Rename Program.</p>",
+   s:"howto", f:"Свой тембр"},
+  {k:["дискета","диск","форматирование","format","2dd","hd","какая дискета","совместимость диск"],
+   t:"Дискеты: какие подходят",
+   a:"<p>3.5\" дискеты <b>2DD или 2HD</b>, формат <b>MS-DOS</b>.</p><p>iS35 читает диски i30, iS40, iS50, iS50B и i40M — чужие сохранённые данные откроются.</p>",
+   s:"disk", f:null},
+  {k:["заводские настройки","сброс к завод","factory preload","вернуть как было","preload"],
+   t:"Вернуть заводское состояние (Factory Preload)",
+   a:"<p>С официального сайта Korg скачивается <b>Factory Preload Data</b> (ZIP) — записывается на дискету, затем грузится: DISK/GLOBAL → Load All. Это восстанавливает заводские программы, аранжировки и настройки.</p>",
+   s:"disk", f:null},
+  {k:["русский язык","русифицировать","русский экран","язык меню","на русском экран"],
+   t:"Можно ли сделать экран русским?",
+   a:"<p>Нет. Прошивка iS35 зашита в ROM и не меняется — экран всегда на английском. Поэтому это приложение и существует: оно — твой русский перевод всей панели и меню.</p>",
+   s:"info", f:null},
+  {k:["midi","разъёмы midi","midi out","thru"],
+   t:"MIDI-разъёмы iS35",
+   a:"<p>На задней панели: <b>MIDI IN 1, MIDI IN 2, MIDI OUT, MIDI THRU</b>, плюс DAMPER, ASSIGNABLE PEDAL/SWITCH, EC5, OUTPUT L/R и INPUT-IN (микрофон/гитара).</p>",
+   s:"ref", f:null},
+  {k:["drum kit","барабаны на клавиатуре","m.drum","набор ударных","dr"],
+   t:"Барабаны на клавиатуре (M.DRUM)",
+   a:"<p><b>KEYBOARD MODE → M.DRUM</b> — каждая клавиша превращается в ударный инструмент. Набор: в секции PROGRAM нажми банк <b>F дважды</b> — на дисплее «Dr» — и выбери номер.</p>",
+   s:"howto", f:"Наложение двух тембров"},
+  {k:["сколько тембров","голосов","полифония","характеристики","32 голоса","384","ai2","память pcm"],
+   t:"Характеристики в двух словах",
+   a:"<p>Синтез AI2, <b>32 голоса</b>, <b>14 МБ</b> PCM ROM, <b>384 программы</b> (банки A–F, номера 11–88; F = USER), 47 типов эффектов в 2 системах, 61 активная клавиша с чувствительностью к скорости нажатия и посленажатия.</p>",
+   s:"info", f:null},
+  {k:["аранжировки","стили","сколько стилей","ритмы","bank a b","user стиль","128"],
+   t:"Стили (аранжировки): сколько и как выбрать",
+   a:"<p><b>128 ROM + 16 USER</b> стилей. Выбор: BANK (A / B / USER) + двузначный номер 11–88 кнопками NUMBER 1–8.</p><p>Полный список групп — в разделе «Справочник».</p>",
+   s:"ref", f:null},
+  {k:["keyboard set","клавиатурный сет","запомнить настройки панели","write keyboard set"],
+   t:"Keyboard Sets — запомнить всю панель одной кнопкой",
+   a:"<p><b>Keyboard Set</b> сохраняет сразу все дорожки, тембры и громкости. Есть 3 банка по 5 наборов.</p><p>Запись: <b>REC/WRITE/LYRICS → Write Keyboard Set</b> → выбери слот → <b>ENTER/YES</b>. И не забудь сохранить на дискету — память USER при выключении стирается.</p>",
+   s:"panel", f:"REC/WRITE"},
+  {k:["не включается","включается и гаснет","дисплей не горит","адаптер","питание"],
+   t:"Синт не включается",
+   a:"<p>Проверь сетевой адаптер и его разъём сзади, тумблер POWER, предохранитель в адаптере. Дисплей горит, но звука нет — смотри ответ «Нет звука». Если не включается совсем — это уже в сервис, прошивку тут не починить.</p>",
+   s:"info", f:null},
+  {k:["сонг эдит","многодорожечная","song edit","quantize","квантизац","event edit"],
+   t:"Многодорожечная запись (SONG EDIT)",
+   a:"<p><b>SONG EDIT</b> → страница <b>Recording</b> (PAGE +/−) → <b>REC/WRITE/LYRICS</b> → <b>START/STOP</b> → играй партию. Дорожку выбирай кнопками VOLUME/PROGRAM (вторые восемь — сначала <b>TRK SELECT</b>). Сохранение — страница Save, получится стандартный .MID.</p><p>Правка: Event Edit, Quantize. SMF с компьютера грузится через Load.</p>",
+   s:"howto", f:"SONG EDIT"},
+  {k:["jukebox","джукебокс","плейлист","список песен"],
+   t:"JukeBox — плейлист с дискеты",
+   a:"<p>В SONG PLAY встать на песню и нажать <b>ENTER/YES</b> — она добавится в список JukeBox, и треки будут идти по очереди.</p>",
+   s:"howto", f:"минусовку"},
+  {k:["как открыть раздел","переключить вкладку","вкладки","навигация","где кнопки"],
+   t:"Как пользоваться этим приложением",
+   a:"<p>Сверху — вкладки: «Режимы», «Панель», «Как сделать», «Словарь», «Справочник», «Дискета/Global», «О синте» и «ИИ». Нажимаешь — открывается раздел; внутри все карточки раскрываются тапом.</p>",
+   s:"panel", f:null}
+];
+
+const chatLog = document.getElementById("chatLog");
+const chatInput = document.getElementById("chatInput");
+const chips = document.getElementById("chips");
+const norm = s => String(s).toLowerCase().replace(/ё/g, "е").replace(/[^a-zа-я0-9\s\-]/g, " ").replace(/\s+/g, " ").trim();
+
+const STOP = new Set(["как","что","это","где","мне","меня","мой","мои","моя","твой","для","чтобы","почему","потому","который","когда","такой","такое","там","есть","быть","если","или","очень","просто","и","а","но","на","в"]);
+
+function matchFaq(q){
+  const tokens = norm(q).split(" ").filter(t => t.length > 1 && !STOP.has(t));
+  if (!tokens.length) return [];
+  return FAQ.map(f => {
+    let score = 0;
+    f.k.forEach(kw => {
+      const nk = norm(kw);
+      if (!nk) return;
+      const kws = nk.split(" ");
+      const matched = new Set();
+      tokens.forEach(t => {
+        let best = 0;
+        kws.forEach(kwTok => {
+          if (kwTok.length < 3) return;
+          if (t === kwTok) best = Math.max(best, 3 + Math.min(kwTok.length, 8));
+          else if ((t.length >= 3 && t.startsWith(kwTok)) || (kwTok.startsWith(t) && kwTok.length >= 5))
+            best = Math.max(best, Math.min(kwTok.length, t.length));
+          else if (kwTok.length >= 6 && t.length >= 6 && kwTok.slice(0, 5) === t.slice(0, 5))
+            best = Math.max(best, Math.min(kwTok.length, t.length) - 2);
+        });
+        if (best){ score += best; matched.add(t); }
+      });
+      if (kws.length > 1 && matched.size >= kws.length) score += 5;
+      if (matched.size) score += 1;
+    });
+    return {score, f};
+  }).filter(x => x.score > 0).sort((a, b) => b.score - a.score).slice(0, 3).map(x => x.f);
+}
+
+function goTo(sec, frag){
+  const btn = document.querySelector('#nav button[data-v="' + sec + '"]');
+  if (btn) btn.click();
+  if (!frag) return;
+  requestAnimationFrame(() => {
+    const target = norm(frag);
+    let hit = null;
+    document.querySelectorAll("#v-" + sec + " details").forEach(d => {
+      const sum = d.querySelector("summary");
+      const isHit = sum && target && norm(sum.textContent).includes(target);
+      d.open = isHit;
+      if (isHit && !hit) hit = d;
+    });
+    if (hit) setTimeout(() => hit.scrollIntoView({behavior:"smooth", block:"center"}), 60);
+  });
+}
+
+function botAnswer(q){
+  const bubble = el("div", {class:"chat b"}, "Ищу в базе…");
+  chatLog.appendChild(bubble);
+  chatLog.scrollTop = chatLog.scrollHeight;
+  setTimeout(() => {
+    const hits = matchFaq(q);
+    if (!hits.length){
+      bubble.innerHTML = "Не нашёл точного ответа. Попробуй другими словами — например: <i>«как сохранить», «нет звука», «записать песню», «сменить тембр»</i> — или выбери вопрос из кнопок ниже.";
+      chatLog.scrollTop = chatLog.scrollHeight;
+      return;
+    }
+    hits.forEach((f, i) => {
+      const box = el("div", {class: i ? "more" : ""}, "<h4>" + f.t + "</h4>" + f.a);
+      box.insertAdjacentHTML("beforeend", '<div class="go" data-s="' + f.s + '" data-f="' + (f.f || "") + '">Открыть в разделе →</div>');
+      bubble.appendChild(box);
+    });
+    chatLog.scrollTop = chatLog.scrollHeight;
+  }, 300);
+}
+
+function ask(q){
+  q = q.trim();
+  if (!q) return;
+  chatLog.appendChild(el("div", {class:"chat u"}, q));
+  chatInput.value = "";
+  botAnswer(q);
+}
+
+chatInput.addEventListener("keydown", e => { if (e.key === "Enter") ask(chatInput.value); });
+chatLog.addEventListener("click", e => {
+  const g = e.target.closest(".go");
+  if (g) goTo(g.dataset.s, g.dataset.f);
+});
+
+["Как сохранить мои настройки?","Нет звука — что делать?","Как записать свою песню?","Как играть минусовку с дискеты?","Как сменить тембр?","Хочу накладывать два звука","Где настраиваются аккорды?","Что такое SINGLE TOUCH?"].forEach(q => {
+  chips.appendChild(el("button", {}, q));
+});
+chips.addEventListener("click", e => { if (e.target.matches("button")) ask(e.target.textContent); });
+
+chatLog.appendChild(el("div", {class:"chat b"}, "Привет! Я помощник по iS35. Пиши вопрос своими словами — «нет звука», «как сохранить», «как записать песню» — я сам найду нужный раздел и покажу, куда нажать на синтезаторе."));
 
 document.getElementById("nav").addEventListener("click", e => {
   const btn = e.target.closest("button");
