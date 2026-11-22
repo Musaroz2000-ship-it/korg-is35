@@ -112,6 +112,8 @@
   @keyframes tp{0%,100%{opacity:.2}50%{opacity:.9}}
   .fab{position:fixed; right:14px; bottom:16px; z-index:60; width:54px; height:54px; border-radius:50%; border:none; background:var(--accent); color:#141414; font-size:24px; box-shadow:0 4px 14px rgba(0,0,0,.55); cursor:pointer; display:none}
   .fab.on{display:block}
+  .easy{background:rgba(79,140,255,.14); border:1px solid rgba(79,140,255,.4); color:#a9c6ff; border-radius:10px; padding:9px 11px; font-size:13px; line-height:1.5; margin:2px 0 6px}
+  .gloss{margin-top:10px; padding:9px 11px; border-left:3px solid var(--accent); background:rgba(245,166,35,.08); border-radius:8px; font-size:13px; color:var(--muted); line-height:1.5}
   .newdlg{margin:14px auto 0; width:max-content; color:var(--muted); font-size:13px; cursor:pointer; border:1px solid var(--line); border-radius:999px; padding:7px 14px}
   .newdlg:active{color:var(--accent); border-color:var(--accent)}
 </style>
@@ -303,7 +305,7 @@
 </section>
 
 <section class="view" id="v-ai">
-  <p class="lead">Помощник ищет по всей базе руководства: панель, режимы, сценарии, словарь и справочники. Пиши как удобно — «нет звука», «не сохраняется», «одни барабаны играют». Работает полностью офлайн.</p>
+  <p class="lead">Помощник работает как мини-поисковик: ему не нужны готовые темы — он анализирует любые слова из твоего вопроса, ищет по всему руководству (кнопки, режимы, сценарии, словарь, звуки, стили), отвечает по-простому и сам расшифровывает непонятные английские термины. Работает полностью офлайн.</p>
   <div class="card" id="chatLog"></div>
   <div class="inrow">
     <input class="search" id="chatInput" type="search" autocomplete="off" placeholder="Спроси что-нибудь про iS35…">
@@ -773,64 +775,207 @@ const chips = document.getElementById("chips");
 const fab = document.getElementById("fab");
 
 const norm = s => String(s).toLowerCase().replace(/ё/g, "е").replace(/[^a-zа-я0-9\s-]/g, " ").replace(/\s+/g, " ").trim();
-const root5 = s => s.length >= 6 ? s.slice(0, 5) : null;
+const STOP = new Set(["как","что","это","где","мне","меня","мой","мои","моя","твой","для","чтобы","почему","потому","который","когда","такой","такое","там","есть","быть","если","или","очень","просто","значит","хочу","нужен","нужно","надо","сделать","сначала","пожалуйста","объясни","подскажи","музыка","и","а","но","на","в","у","же","бы","ли","то"]);
 
-const STOP = new Set(["как","что","это","где","мне","меня","мой","мои","моя","твой","для","чтобы","почему","потому","который","когда","такой","такое","там","есть","быть","если","или","очень","просто","и","а","но","на","в","у","же","бы","ли","то"]);
+const EASY = {
+  "Нет звука — что проверить сначала":"Проще говоря: синт молчит почти всегда по бытовым причинам. Иди по порядку: громкость &#8594; не глушены ли дорожки &#8594; провод к колонкам в OUTPUT L/R. По этим трём пунктам находится 9 из 10 причин.",
+  "Аккомпанемент играет только ритм":"Проще говоря: барабаны стучат сами по себе, а весь остальной оркестр заводится от аккорда, который ты берёшь левой рукой. Аккорда нет или зона стоит не та — синт оставляет только барабаны.",
+  "Как сохранять: память USER стирается при выключении":"Проще говоря: у синта две памяти. Заводская — вечная. Твоя (USER) — обнуляется при каждом выключении питания. Всё, что ты сделал, живёт ровно до кнопки POWER, единственный способ спасти — записать на дискету.",
+  "Записать своё исполнение (Backing Sequence)":"Проще говоря: синт записывает тебя, как диктофон: включил запись, сыграл с автоаккомпанементом — получилась песня. Но запись живёт в оперативной памяти и стирается при выключении, поэтому потом обязательно перепиши её на дискету.",
+  "Минусовка с дискеты + караоке":"Проще говоря: дискета с файлом .MID — это готовая песня без голоса. Синт играет её как минус, а текст показывает на экране, как караоке. Тебе остаётся петь сверху.",
+  "Сменить тембр (звук)":"Проще говоря: тембр — это звук инструмента (рояль, скрипка, гитара). Синт держит несколько инструментов сразу — по одному на дорожку. Сначала выбери, у какой дорожки менять звук, потом набери номер нового.",
+  "Разделить клавиатуру (SPLIT)":"Проще говоря: клавиатура делится на две части, как будто играют два инструмента: слева один звук, справа другой. Границу можно передвинуть: держишь SPLIT POINT и давишь нужную клавишу.",
+  "Наложить два тембра (Layer)":"Проще говоря: два звука играют одновременно от одних клавиш — как дублируют два музыканта. Включи сразу Upper 1 и Upper 2 с разными тембрами, например рояль + струнные.",
+  "Сменить тональность (TRANSPOSE)":"Проще говоря: песня целиком перескакивает выше или ниже. Нужно, когда поёшь: жми + или −, пока голосу не станет удобно. Сама при этом музыка не меняется — только высота.",
+  "Сменить темп":"Проще говоря: темп — это скорость, с которой играет аккомпанемент. Стрелки TEMPO/VALUE — быстрее и медленнее. А чтобы синт не менял скорость сам при смене стиля, включи блокировку темпа (кнопка TEMPO с лампой).",
+  "Филлы, вариации, вступление и концовка":"Проще говоря: синт играет как живой оркестр. VARIATION 1–4 — плотность игры: от лёгкой до мощной. FILL — сбивка барабанщика в нужный момент. INTRO — красивое начало, ENDING — финал, FADE — плавное появление и уход звука.",
+  "SINGLE TOUCH — тембры подбираются сами":"Проще говоря: синт сам подбирает подходящие звуки клавиатуры под каждый стиль — включил SINGLE TOUCH и не думаешь о ручках, просто играешь.",
+  "Настроить, чтобы аккорды было легче брать":"Проще говоря: синт умеет угадывать аккорд по одной клавише. Ставишь One Finger — нажал одну ноту, а бас и гитары уже играют полный аккорд. Для начинающих самое то.",
+  "Заглушить дорожку / сбросить залипшую ноту":"Проще говоря: MUTE — выключает звук у одной дорожки, если она мешает. RESET — «перезагрузка»: если залипла нота или что-то странное, одно нажатие возвращает всё в норму.",
+  "Микрофон и вокал-гармонайзер":"Проще говоря: вставь микрофон в разъём INPUT-IN, крути ручку GAIN, пока сигнал зелёный — это нормальная громкость, оранжевый — перебор. Гармонайзер подкладывает к голосу подголоски в такт аккордам; свои настройки после запомни в Keyboard Set.",
+  "Создать свой тембр и сохранить":"Проще говоря: берёшь готовый похожий звук и правишь его по частям: волна &#8594; фильтр &#8594; громкость/огибающая &#8594; эффекты. Обязательно запиши результат на свободное место в банке F — иначе при выключении всё пропадёт.",
+  "Дискеты: какие подходят":"Проще говоря: нужны обычные 3,5-дюймовые дискеты 2DD или 2HD, отформатированные в MS-DOS, как у старого ПК. Дискеты от других синтезаторов Korg (i30, iS40, iS50, iS50B, i40M) тоже читаются.",
+  "Вернуть заводское состояние (Factory Preload)":"Проще говоря: синт можно вернуть к состоянию «как из магазина». С сайта Korg скачивается специальный образ, он записывается на дискету, и синт из неё загружается.",
+  "Можно ли сделать экран русским?":"Проще говоря: нет — экранная прошивка зашита в память синта намертво, английский там навсегда. Поэтому и существует это приложение: у каждой кнопки здесь есть перевод и объяснение.",
+  "MIDI-разъёмы iS35":"Проще говоря: сзади есть круглые гнёзда MIDI для связи с другими синтезаторами и компьютерами. IN — команды входят, OUT — выходят, THRU — пересылает дальше. Это старая, но живучая «школа» из круглых разъёмов и особых кабелей.",
+  "Барабаны на клавиатуре (M.DRUM)":"Проще говоря: клавиатура превращается в барабанную установку: каждая клавиша — свой барабан или тарелка. Набор барабанов выбирается как обычный звук, но в банке F: нажми F два раза, на экране появится «Dr».",
+  "Характеристики в двух словах":"Проще говоря: сильная машина середины 90-х: 32 звука одновременно, 384 готовых тембра, 128 стилей аккомпанемента плюс 16 своих, десятки эффектов и дискета для хранения.",
+  "Стили (аранжировки): сколько и как выбрать":"Проще говоря: стиль — это жанр: вальс, рок, кантри, фанк. Выбрал стиль — синт сам играет под него барабаны, бас и оркестр. Всего 128 заводских плюс 16 мест для своих.",
+  "Keyboard Sets — запомнить всю панель одной кнопкой":"Проще говоря: синт запоминает ВООБЩЕ всё состояние панели (тембры, громкости, разделение клавиатуры) в одну ячейку. Играешь песню — между кусками не крутишь ручки, а просто давишь 1, 2 или 3.",
+  "Синт не включается":"Проще говоря: синт питается от отдельного адаптера. Проверь, что провод плотно сидит в гнезде сзади и в розетке, тумблер POWER включён. Не помогает — смотри предохранитель в адаптере, дальше это уже работа для мастерской.",
+  "Многодорожечная запись (SONG EDIT)":"Проще говоря: есть два способа записать песню. Простой — как диктофон, всё сразу (Backing Sequence). А SONG EDIT — это до 16 отдельных дорожек: ударные, бас, мелодия пишутся и правятся по очереди, как на студии.",
+  "JukeBox — плейлист с дискеты":"Проще говоря: синт играет песни с дискеты по очереди сам, как музыкальный центр: выбрал список — и он играет без тебя."
+};
 
-function matchFaq(q){
-  const toks = norm(q).split(" ").filter(t => t.length > 1 && !STOP.has(t));
-  if (!toks.length) return [];
-  return FAQ.map(f => {
-    let score = 0;
-    f.k.forEach(kw => {
-      const nk = norm(kw);
-      if (!nk) return;
-      const kws = nk.split(" ");
-      const hit = new Set();
-      toks.forEach(t => {
-        let best = 0;
-        kws.forEach(kwTok => {
-          if (kwTok.length < 3) return;
-          if (t === kwTok) best = Math.max(best, 4 + Math.min(kwTok.length, 8));
-          else if ((t.length >= 4 && t.startsWith(kwTok)) || (kwTok.startsWith(t) && kwTok.length >= 5))
-            best = Math.max(best, Math.min(kwTok.length, t.length));
-          else {
-            const rt = root5(t), rk = root5(kwTok);
-            if (rt && rk && rt === rk) best = Math.max(best, Math.min(kwTok.length, t.length) - 2);
-          }
-        });
-        if (best){ score += best; hit.add(t); }
-      });
-      if (kws.length > 1 && hit.size >= kws.length) score += 6;
-      if (hit.size) score += 1;
-    });
-    return {score, f};
-  }).filter(x => x.score > 0).sort((a, b) => b.score - a.score).slice(0, 3).map(x => x.f);
+function stripTags(html){
+  const d = document.createElement("div");
+  d.innerHTML = html;
+  return (d.textContent || "").replace(/\s+/g, " ");
+}
+function escText(s){
+  return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
-const KB = [];
+const DOCS = [];
+FAQ.forEach(f => DOCS.push({kind:"faq", faq:f, ttl:f.t + " " + f.k.join(" "), body:stripTags(f.a) + " " + stripTags(EASY[f.t] || "")}));
 document.querySelectorAll("section.view details").forEach(d => {
   const sm = d.querySelector("summary");
   if (!sm) return;
   const det = d.querySelector(".det");
-  KB.push({sec: d.closest("section").id.slice(2), el: d,
-    ttl: sm.textContent.replace(/\s+/g, " ").trim(),
-    txt: norm(sm.textContent + " " + (det ? det.textContent : ""))});
+  const snip = det ? (det.textContent || "").replace(/\s+/g, " ").trim() : "";
+  DOCS.push({kind:"card", sec:d.closest("section").id.slice(2), el:d,
+    ttl:sm.textContent.replace(/\s+/g, " ").trim(), body:snip, snip});
 });
+DICT.forEach(d => DOCS.push({kind:"dict", ttl:d[0] + " " + d[1], body:d[2] || "", dict:d}));
+const ALIAS = [["Piano","piano рояль фортепиано пианино"],["Guitar","guitar гитара"],["Bass","bass бас"],["Drum","drum барабан"],["Organ","organ орган"],["Strings","strings струнные струнн"],["Trumpet","trumpet труба"],["Trombone","trombone тромбон"],["Sax","sax саксофон"],["Flute","flute флейта"],["Piccolo","piccolo флейта пикколо"],["Violin","violin скрипка"],["Cello","cello виолончель"],["Contrabass","контрабас"],["Harp","harp арфа"],["Choir","choir хор"],["Accordion","accordion аккордеон"],["Harmonica","harmonica гармошка гармоника"],["Brass","brass духовые медь"],["Clavinet","клавинет"],["Clavi ","клавинет"],["Vibraphone","vibraphone виброфон"],["Marimba","marimba маримба"],["Bell","bell колокольчик колокол"],["Banjo","banjo банджо"],["Sitar","sitar ситар"],["Kalimba","kalimba калимба"],["Lead","lead соло лид"],["Pad","pad подложка фон"],["Oboe","oboe гобой"],["Bassoon","bassoon фагот"],["Clarinet","clarinet кларнет"],["Whistle","whistle свист"],["Tango","tango танго"],["Percussive","перкуссия"]];
+GM.forEach((name, i) => {
+  let extra = "";
+  ALIAS.forEach(([key, al]) => { if (name.indexOf(key) >= 0) extra += " " + al; });
+  DOCS.push({kind:"gm", gmi:i, ttl:name + extra, body:extra});
+});
+const SALIAS = [["Waltz","вальс"],["Polka","полька"],["Mazurka","мазурка"],["March","марш"],["Fox Trot","фокстрот"],["Quick Step","квикстеп"],["Charleston","чарльстон"],["Operetta","оперетта"],["Big Band","биг бенд оркестр"],["Swing","свинг"],["Jazz","джаз"],["Bop","боп"],["Broadway","бродвей"],["Hollywood","голливуд"],["Ballad","баллада"],["Funk","фанк"],["Blues","блюз"],["Gospel","госпел"],["Shuffle","шаффл"],["R & B","ритм блюз ритмблюз"],["Rock","рок"],["Roll","н-ролл"],["Country","кантри"],["Dixieland","диксиленд"],["Tarantella","тарантелла"],["Sevillana","севильяна"],["Gipsy","цыганский"],["Mariachi","мариачи"],["Bolero","болеро"],["Minuetto","менуэт"],["New Age","нью эйдж"],["Latin","латино"],["Pop","поп"],["Musette","мюзет"],["Laendler","лендлер"],["Beat","бит"]];
+STYLES.forEach((g, gi) => g[1].forEach((n, i) => {
+  let extra = "";
+  SALIAS.forEach(([key, al]) => { if (n.indexOf(key) >= 0) extra += " " + al; });
+  DOCS.push({kind:"style", ttl:n + extra, body:g[0] + extra, grp:g[0], num:"B" + (gi + 1) + (i + 1)});
+}));
 
-let kbHits = [];
-function matchKB(q){
-  const toks = norm(q).split(" ").filter(t => t.length > 2 && !STOP.has(t));
-  if (!toks.length) return [];
-  return KB.map(item => {
-    let score = 0;
-    const ttl = norm(item.ttl);
-    toks.forEach(t => {
-      if (item.txt.includes(t)) score += ttl.includes(t) ? 6 : 2;
-      else if (t.length >= 6 && item.txt.includes(t.slice(0, 5))) score += 1;
+const IDX = new Map();
+DOCS.forEach((d, di) => {
+  [["ttl", true], ["body", false]].forEach(([field, isTtl]) => {
+    norm(d[field]).split(" ").forEach(w => {
+      if (w.length < 2 || STOP.has(w)) return;
+      if (w.length >= 6) w = w.slice(0, 5);
+      let m = IDX.get(w);
+      if (!m){ m = new Map(); IDX.set(w, m); }
+      let e = m.get(di);
+      if (!e){ e = {t:0, b:0}; m.set(di, e); }
+      if (isTtl) e.t++; else e.b++;
     });
-    return {score, item};
-  }).filter(x => x.score >= 3).sort((a, b) => b.score - a.score).slice(0, 5).map(x => x.item);
+  });
+});
+const KEYS = [...IDX.keys()];
+
+function lev1(a, b){
+  let diff = 0, i = 0, j = 0;
+  while (i < a.length && j < b.length){
+    if (a[i] === b[j]){ i++; j++; continue; }
+    if (++diff > 1) return false;
+    if (a.length > b.length) i++;
+    else if (a.length < b.length) j++;
+    else { i++; j++; }
+  }
+  return diff + a.length - i + b.length - j <= 1;
+}
+function lookup(t){
+  let m1 = IDX.get(t);
+  if (m1) return [{key:t, m:m1}];
+  if (t.length >= 6){
+    const m2 = IDX.get(t.slice(0, 5));
+    if (m2) return [{key:t.slice(0, 5), m:m2}];
+  }
+  const out = [];
+  for (const k of KEYS){
+    const mn = Math.min(k.length, t.length);
+    if ((k.startsWith(t) || t.startsWith(k)) && mn >= 4) out.push({key:k, m:IDX.get(k)});
+    else if (t.length >= 5 && k.length >= 5 && lev1(k, t)) out.push({key:k, m:IDX.get(k)});
+  }
+  return out;
+}
+
+function searchAll(q){
+  const wantsDict = /(перевед|значит|означает|по русски|по-русски|что за слово)/.test(norm(q));
+  const toks = norm(q).split(" ").filter(t => t.length > 1 && !STOP.has(t));
+  if (!toks.length) return [];
+  const per = toks.map(t => {
+    const set = new Set();
+    lookup(t).forEach(({m}) => m.forEach((_, di) => set.add(di)));
+    return set;
+  });
+  const scores = new Map();
+  toks.forEach((t, ti) => {
+    per[ti].forEach(di => {
+      let sc = 0;
+      lookup(t).forEach(({m}) => {
+        const e = m.get(di);
+        if (e) sc += ((e.t ? (3 + 3 * e.t) : 0) + e.b) / Math.sqrt(m.size);
+      });
+      scores.set(di, (scores.get(di) || 0) + sc);
+    });
+  });
+  const qn = toks.join(" ");
+  const out = [];
+  scores.forEach((s, di) => {
+    let cov = 0;
+    per.forEach(set => { if (set.has(di)) cov++; });
+    const kindW = DOCS[di].kind === "dict" ? (wantsDict ? 4 : 1.5) : (DOCS[di].kind === "gm" || DOCS[di].kind === "style") ? 1.3 : DOCS[di].kind === "faq" ? 1.1 : 1;
+    let score = s * kindW * (0.55 + 0.45 * cov / toks.length);
+    const ttlN = norm(DOCS[di].ttl), bodyN = norm(DOCS[di].body);
+    if (ts(ttlN).includes(qn)) score += 8;
+    else if (ts(bodyN).includes(qn)) score += 4;
+    out.push({score, di});
+  });
+  const ranked = out.filter(x => x.score >= 0.5).sort((a, b) => b.score - a.score);
+  const seen = new Set(), res = [];
+  for (const x of ranked){
+    const tt = DOCS[x.di].ttl.slice(0, 18);
+    if (seen.has(tt)) continue;
+    seen.add(tt);
+    res.push(DOCS[x.di]);
+    if (res.length >= 4) break;
+  }
+  return res;
+}
+function ts(s){ return s.replace(/-/g, " ").replace(/\s+/g, " "); }
+
+function gloss(html, ttl){
+  const txt = norm(stripTags(html) + " " + (ttl || "")).replace(/-/g, " ");
+  const out = [];
+  DICT.forEach(d => {
+    const en = norm(d[0]).replace(/-/g, " ");
+    if (en.length < 5) return;
+    const parts = en.split(" ").filter(p => p.length >= 3 && !STOP.has(p));
+    if (parts.length && parts.every(p => txt.includes(p))) out.push(d);
+  });
+  if (!out.length) return "";
+  return '<div class="gloss">&#128218; Непонятные слова из ответа: ' +
+    out.slice(0, 3).map(d => "<b>" + escText(d[0]) + "</b> — " + escText(d[1])).join("; ") + ".</div>";
+}
+
+function docAnswer(d){
+  if (d.kind === "faq"){
+    const easy = EASY[d.faq.t] || "";
+    let h = "<h4>" + d.faq.t + "</h4>";
+    if (easy) h += '<div class="easy">' + easy + "</div>";
+    return h + d.faq.a + gloss(d.faq.a, d.faq.t);
+  }
+  if (d.kind === "dict"){
+    const en = d.dict[0], ru = d.dict[1], note = d.dict[2];
+    return "<h4>" + escText(en) + " — по-русски: «" + escText(ru) + "»</h4>" +
+      "<p>На панели и дисплее это слово значит: <b>" + escText(ru) + "</b>." +
+      (note ? " Где использовать: " + escText(note) + "." : "") + "</p>";
+  }
+  if (d.kind === "gm"){
+    const i = d.gmi, bank = i < 64 ? "A" : "B", num = 11 + (i % 64);
+    return "<h4>Звук «" + escText(d.ttl) + "»</h4>" +
+      "<p>На панели он подписан по-английски <b>" + escText(d.ttl) + "</b>. Это один из 128 стандартных GM-звуков, его общий номер <b>" + (i + 1) + "</b>.</p>" +
+      "<p>Выбрать на iS35: в секции <b>PROGRAM</b> набери банк <b>" + bank + "</b> и номер <b>" + num + "</b>.</p>" +
+      "<p>GM-звуки нужны, чтобы минусовки и песни с дискет звучали правильными инструментами.</p>";
+  }
+  if (d.kind === "style"){
+    return "<h4>Стиль «" + escText(d.ttl) + "»</h4>" +
+      "<p>Группа: <b>" + escText(d.grp) + "</b>. На панели набирается как <b>" + d.num + "</b>: кнопка банка <b>B</b>, затем номер кнопками NUMBER 1–8.</p>" +
+      "<p>Стиль — это рисунок автоаккомпанемента: барабаны, бас и оркестровые дорожки играют за тебя. Сменил стиль — сменился жанр.</p>";
+  }
+  let snip = d.snip || "";
+  if (snip.length > 260) snip = snip.slice(0, 260).trim() + "…";
+  return "<h4>" + escText(d.ttl) + "</h4>" + (snip ? "<p>" + escText(snip) + "</p>" : "") + gloss(d.snip || "", d.ttl);
+}
+function hitTitle(d){
+  if (d.kind === "dict") return escText(d.dict[0]) + " — " + escText(d.dict[1]);
+  if (d.kind === "gm") return "Звук: " + escText(d.ttl);
+  if (d.kind === "style") return "Стиль: " + escText(d.ttl) + " (" + d.num + ")";
+  return escText(d.ttl);
 }
 
 function goTo(sec, frag){
@@ -849,7 +994,6 @@ function goTo(sec, frag){
     if (hit) setTimeout(() => hit.scrollIntoView({behavior:"smooth", block:"center"}), 60);
   });
 }
-
 function goToEl(sec, det){
   const btn = document.querySelector('#nav button[data-v="' + sec + '"]');
   if (btn) btn.click();
@@ -860,32 +1004,32 @@ function goToEl(sec, det){
     }
   });
 }
+function goToDoc(d){
+  if (d.kind === "faq") return goTo(d.faq.s, d.faq.f);
+  if (d.kind === "card") return goToEl(d.sec, d.el);
+  if (d.kind === "dict") return goTo("dict", d.dict[0]);
+  return goTo("ref");
+}
 
 function smallTalk(q){
   const n = norm(q);
-  if (/^(привет|здравств|хай|ку |доброе|добрый|здоров)/.test(n)) return "Привет! Спрашивай про iS35 что угодно: «нет звука», «как сохранить», «как записать песню», «что значит кнопка»…";
-  if (/с?пасибо|благодар|класс|круто|спс/.test(n)) return "Всегда рад! Если хочешь, спроси ещё — например, как играть минусовку или настроить аккорды под себя.";
+  if (/^(привет|здравств|хай|ку |доброе|добрый|здоров)/.test(n)) return "Привет! Спрашивай что угодно своими словами — я поищу по всему руководству и объясню просто: «не слышно клавиш», «хочу записать песню», «что значит Write»…";
+  if (/с?пасибо|благодар|класс|круто|спс/.test(n)) return "Всегда рад! Заглядывай ещё — по iS35 вопросов не бывает глупых.";
+  if (/^(ты кто|кто ты|ты робот|ты ии|как тебя зовут)/.test(n)) return "Я помощник внутри этого приложения. Живу прямо здесь, в телефоне, работаю без интернета и знаю всё содержимое этого руководства по iS35 — ищу по нему любые слова, которые ты напишешь.";
   return null;
 }
 
-function renderFaqHits(bubble, hits){
-  const f = hits[0];
-  bubble.innerHTML = "<h4>" + f.t + "</h4>" + f.a;
-  bubble.insertAdjacentHTML("beforeend", '<div class="go" data-s="' + f.s + '" data-f="' + (f.f || "") + '">Открыть в разделе &#8594;</div>');
-  hits.slice(1).forEach(o => {
-    bubble.insertAdjacentHTML("beforeend", '<div class="more"><h4>' + o.t + '</h4><div class="go" data-s="' + o.s + '" data-f="' + (o.f || "") + '">Открыть &#8594;</div></div>');
+let HITS = [];
+function renderAnswer(bubble, hits){
+  HITS = hits;
+  bubble.innerHTML = docAnswer(hits[0]);
+  if (hits.length > 1) bubble.insertAdjacentHTML("beforeend", '<div class="go" data-g="0">Открыть в разделе &#8594;</div>');
+  hits.slice(1).forEach((o, i) => {
+    bubble.insertAdjacentHTML("beforeend", '<div class="more"><h4>' + hitTitle(o) + '</h4><div class="go" data-g="' + (i + 1) + '">Открыть &#8594;</div></div>');
   });
 }
 
-function renderKbHits(bubble, items){
-  bubble.innerHTML = "Готовой темы на такой вопрос нет, но нашёл подходящие карточки руководства:";
-  kbHits = items;
-  items.forEach((it, i) => {
-    bubble.insertAdjacentHTML("beforeend", '<div class="' + (i ? "more" : "kbfirst") + '"><h4>' + it.ttl + '</h4><div class="go" data-kb="' + i + '">Открыть &#8594;</div></div>');
-  });
-}
-
-const NOANSWER = "Такого вопроса в моей базе пока нет. Попробуй другими словами — например: <i>«нет звука», «как сохранить», «записать песню», «сменить тембр», «не понимаю кнопку»</i> — или жми на кнопки с готовыми вопросами ниже. Я ищу одновременно в базе тем и по всем карточкам руководства, так что позже найдётся больше.";
+const NOANSWER = "В том, что ты написал, я не нашёл знакомых слов во всём руководстве. Опиши по-человечески: что хочешь сделать или что сломалось — например «хочу записать песню», «не слышно клавиш», «звук тусклый», «стирается при выключении». Если и это не найдётся — напиши мне, добавлю ответ в базу.";
 
 function botAnswer(q){
   const bubble = el("div", {class:"chat b"}, '<div class="typing"><span></span><span></span><span></span></div>');
@@ -893,12 +1037,10 @@ function botAnswer(q){
   chatLog.scrollTop = chatLog.scrollHeight;
   setTimeout(() => {
     const small = smallTalk(q);
-    const hits = small ? [] : matchFaq(q);
     if (small) bubble.innerHTML = small;
-    else if (hits.length) renderFaqHits(bubble, hits);
     else {
-      const kbs = matchKB(q);
-      if (kbs.length) renderKbHits(bubble, kbs);
+      const hits = searchAll(q);
+      if (hits.length) renderAnswer(bubble, hits);
       else bubble.innerHTML = NOANSWER;
     }
     suggest();
@@ -922,7 +1064,7 @@ function ask(q){
 }
 
 function greet(){
-  chatLog.appendChild(el("div", {class:"chat b"}, "Привет! Я помощник по iS35. Пиши вопрос своими словами — «нет звука», «как сохранить», «как записать песню», «что значит кнопка» — я найду готовый ответ и покажу кнопку, которая перенесёт прямо в нужный раздел руководства."));
+  chatLog.appendChild(el("div", {class:"chat b"}, "Привет! Я помощник по iS35 — живу в самом приложении и работаю без интернета. Пиши как в чат с человеком, любыми словами: «нет звука», «не сохраняется», «что значит кнопка Write», «где рояль», «как playback с дискеты». Я проанализирую слова, найду нужное место в руководстве, объясню по-простому и расшифрую непонятные термины."));
 }
 
 chatInput.addEventListener("keydown", e => { if (e.key === "Enter") ask(chatInput.value); });
@@ -931,8 +1073,8 @@ document.getElementById("newDlg").addEventListener("click", () => { chatLog.inne
 chatLog.addEventListener("click", e => {
   const g = e.target.closest(".go");
   if (!g) return;
-  if (g.dataset.kb !== undefined){ const it = kbHits[+g.dataset.kb]; if (it) goToEl(it.sec, it.el); }
-  else goTo(g.dataset.s, g.dataset.f);
+  const hit = HITS[+g.dataset.g];
+  if (hit) goToDoc(hit);
 });
 chips.addEventListener("click", e => { if (e.target.matches("button")) ask(e.target.textContent); });
 
@@ -949,6 +1091,7 @@ document.getElementById("nav").addEventListener("click", e => {
 
 greet();
 suggest();
+
 
 document.getElementById("nav").addEventListener("click", e => {
   const btn = e.target.closest("button");
