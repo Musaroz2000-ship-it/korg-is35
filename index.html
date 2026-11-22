@@ -313,7 +313,7 @@
   <div class="card" id="chatLog"></div>
   <div class="aimode">
     <label><input type="checkbox" id="aiNet" checked> &#129504; Нейросеть (нужен интернет)</label>
-    <span class="aimsub">выключено — офлайн-поиск по руководству; нейросеть: большая модель 117 млрд параметров + запасной сервер</span>
+    <span class="aimsub">выключено — офлайн-поиск по руководству; нейросеть: 4 бесплатных сервера (модели 117 млрд параметров)</span>
   </div>
   <div class="inrow">
     <input class="search" id="chatInput" type="search" autocomplete="off" placeholder="Спроси что угодно, своими словами…">
@@ -1049,7 +1049,15 @@ function fmtNet(t){
 }
 
 let netCtrl = null;
-let brNext = 0, netNext = 0;
+let provNext = {};
+let netLog = "";
+
+const PROVS = [
+  {n: "blockrun", u: "https://blockrun.ai/v1/chat/completions", m: "openai/gpt-oss-120b", pause: 5000, busy: 20000},
+  {n: "blockrun2", u: "https://blockrun.ai/api/v1/chat/completions", m: "openai/gpt-oss-120b", pause: 5000, busy: 20000},
+  {n: "ovh", u: "https://oai.endpoints.kepler.ai.cloud.ovh.net/v1/chat/completions", m: "gpt-oss-120b", pause: 32000, busy: 32000},
+  {n: "pollinations", u: "https://text.pollinations.ai/openai", m: null, pause: 46000, busy: 46000}
+];
 
 function readSSE(r, onChunk){
   const dec = new TextDecoder();
@@ -1097,29 +1105,21 @@ function askNet(q, onChunk){
   const ok = setTimeout(() => netCtrl.abort(), 60000);
   const pull = () => { clearTimeout(ok); netCtrl = null; };
   return new Promise(res => {
-    const finish = t => { pull(); res(t); };
-    const tryBr = () => {
-      postChat("https://blockrun.ai/v1/chat/completions", "openai/gpt-oss-120b", q, onChunk)
-        .then(t => { brNext = Date.now() + 5000; finish(t); })
-        .catch(reason => { brNext = Date.now() + (reason === "busy" ? 20000 : 5000); tryPol(); });
+    const log = [];
+    const finish = t => { netLog = log.join(", "); pull(); res(t); };
+    const run1 = k => {
+      if (k >= PROVS.length){ finish(null); return; }
+      const pv = PROVS[k];
+      if (Date.now() < (provNext[pv.n] || 0)){ log.push(pv.n + ":пауза"); run1(k + 1); return; }
+      postChat(pv.u, pv.m, q, onChunk).then(t => {
+        provNext[pv.n] = Date.now() + pv.pause; finish(t);
+      }).catch(reason => {
+        provNext[pv.n] = Date.now() + (reason === "busy" ? pv.busy : 5000);
+        log.push(pv.n + ":" + (reason === "busy" ? "занят" : "недоступен"));
+        run1(k + 1);
+      });
     };
-    const tryPol = () => {
-      postChat("https://text.pollinations.ai/openai", null, q, onChunk)
-        .then(t => { netNext = Date.now() + 46000; finish(t); })
-        .catch(reason => {
-          if (reason === "busy"){ netNext = Date.now() + 46000; finish(null); return; }
-          fetch("https://text.pollinations.ai/" + encodeURIComponent(q) + "?system=" + encodeURIComponent(NETSYS), {signal: netCtrl.signal})
-            .then(r => {
-              if (r.status === 402 || r.status === 429){ netNext = Date.now() + 46000; finish(null); throw "stop"; }
-              if (r.status < 200 || r.status >= 300) throw "fail";
-              return r.text();
-            }).then(t => {
-              if (!t || t.length < 2 || /^\s*(rate limit|error|payment|not found|40\d)/i.test(t)){ netNext = Date.now() + 46000; finish(null); return; }
-              netNext = Date.now() + 46000; finish(t);
-            }).catch(() => finish(null));
-        });
-    };
-    if (Date.now() < brNext) tryPol(); else tryBr();
+    run1(0);
   });
 }
 
@@ -1148,7 +1148,7 @@ function botAnswer(q){
     }).then(t => {
       if (!t){
         offlineAnswer(bubble, q);
-        bubble.insertAdjacentHTML("beforeend", '<div class="more">Нейросети сейчас заняты или недоступны — это ответ офлайн-поиска. Попробуй спросить нейросеть ещё раз через минуту.</div>');
+        bubble.insertAdjacentHTML("beforeend", '<div class="more">Бесплатные нейросерверы сейчас не ответили (могут быть заняты у всех). Это ответ офлайн-поиска. Попробуй ещё раз через минуту или две — обычно проходит.<br><span style=\"opacity:.7\">Тех: ' + (netLog || "причин нет — всё на паузе") + '</span></div>');
         chatLog.scrollTop = chatLog.scrollHeight;
         return;
       }
