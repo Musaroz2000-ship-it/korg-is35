@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>KORG iS35 — русский гид</title>
+<style>
+  :root{
+    --bg:#101216; --panel:#191c22; --card:#1f232b; --card2:#252a33;
+    --text:#e8eaee; --muted:#9aa3b0; --line:#2e343f;
+    --accent:#f5a623; --accent2:#4f8cff; --bad:#ff5c5c;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    line-height:1.5; -webkit-font-smoothing:antialiased;
+  }
+  header{
+    padding:20px 16px 12px; text-align:center;
+    background:linear-gradient(160deg,#1b1f27 0%,#14161b 70%);
+    border-bottom:1px solid var(--line);
+  }
+  header h1{margin:0;font-size:20px;letter-spacing:.5px}
+  header h1 b{color:var(--accent)}
+  header p{margin:6px 0 0;color:var(--muted);font-size:13px}
+  nav{
+    display:flex; overflow-x:auto; gap:6px; padding:10px 12px;
+    position:sticky; top:0; background:rgba(16,18,22,.97); backdrop-filter:blur(6px);
+    border-bottom:1px solid var(--line); z-index:10; scrollbar-width:none;
+  }
+  nav::-webkit-scrollbar{display:none}
+  nav button{
+    flex:0 0 auto; border:1px solid var(--line); background:var(--panel); color:var(--muted);
+    padding:8px 14px; border-radius:20px; font-size:14px; cursor:pointer;
+  }
+  nav button.active{background:var(--accent); border-color:var(--accent); color:#141414; font-weight:600}
+  main{max-width:760px; margin:0 auto; padding:16px 14px 60px}
+  section.view{display:none}
+  section.view.active{display:block}
+  h2{font-size:17px; margin:18px 2px 10px}
+  .lead{color:var(--muted); font-size:14px; margin:2px 2px 14px}
+  .card{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px; margin:10px 0}
+  .en{color:#c9c2f2}
+  details{border:1px solid var(--line); border-radius:12px; background:var(--card); margin:9px 0; overflow:hidden}
+  summary{padding:13px 14px; cursor:pointer; font-weight:600; list-style:none; display:flex; align-items:center; gap:10px}
+  summary::-webkit-details-marker{display:none}
+  summary .badge{
+    flex:0 0 auto; width:26px; height:26px; border-radius:8px; background:var(--card2);
+    display:flex; align-items:center; justify-content:center; font-size:12px; color:var(--accent); font-weight:700;
+  }
+  summary .lbl{flex:1}
+  summary .en-sub{display:block; font-weight:400; font-size:12px; color:var(--muted)}
+  .det{padding:0 14px 14px; font-size:14px; color:#cdd3dc}
+  .det ul{margin:6px 0 6px 18px; padding:0}
+  .det ol{margin:6px 0 6px 18px; padding:0}
+  .det li{margin:4px 0}
+  .det .mode{color:var(--accent2); font-weight:600}
+  .step{display:flex; gap:12px; margin:10px 0}
+  .step .n{
+    flex:0 0 26px; height:26px; border-radius:50%; background:var(--accent); color:#141414;
+    font-weight:700; font-size:13px; display:flex; align-items:center; justify-content:center;
+  }
+  .step .b{flex:1; font-size:14px; color:#cdd3dc}
+  .step .b b{color:var(--text)}
+  .warn{
+    border-left:3px solid var(--accent); background:rgba(245,166,35,.08);
+    padding:10px 12px; border-radius:0 10px 10px 0; font-size:13px; margin:10px 0;
+  }
+  .danger{
+    border-left:3px solid var(--bad); background:rgba(255,92,92,.08);
+    padding:10px 12px; border-radius:0 10px 10px 0; font-size:13px; margin:10px 0;
+  }
+  .search{
+    width:100%; padding:11px 14px; border-radius:12px; border:1px solid var(--line);
+    background:var(--card); color:var(--text); font-size:15px; outline:none; margin-bottom:6px;
+  }
+  .search:focus{border-color:var(--accent)}
+  table{width:100%; border-collapse:collapse; font-size:13px; margin:8px 0}
+  th,td{text-align:left; padding:7px 8px; border-bottom:1px solid var(--line); vertical-align:top}
+  th{color:var(--muted); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.4px}
+  td b{color:var(--accent)}
+  .grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:8px}
+  .grid .card{margin:0; padding:10px}
+  .grid .card h4{margin:0 0 4px; font-size:13px; color:var(--accent)}
+  .grid .card p{margin:0; font-size:12px; color:var(--muted)}
+  a{color:var(--accent2)}
+  footer{color:var(--muted); font-size:12px; text-align:center; padding:20px; border-top:1px solid var(--line); margin-top:30px}
+</style>
+</head>
+<body>
+
+<header>
+  <h1><b>KORG iS35</b> · русский гид</h1>
+  <p>Наглядный помощник к синтезатору: панель, режимы, сценарии, словарь, справочники</p>
+</header>
+
+<nav id="nav">
+  <button data-v="panel" class="active">Панель</button>
+  <button data-v="modes">Режимы</button>
+  <button data-v="howto">Как сделать</button>
+  <button data-v="dict">Словарь</button>
+  <button data-v="ref">Звуки · Стили</button>
+  <button data-v="disk">Дискета</button>
+  <button data-v="info">О синте</button>
+</nav>
+
+<main>
+
+<section class="view active" id="v-panel">
+  <p class="lead">Нажми на любую секцию — увидишь, что написано на кнопках и что они делают в каждом режиме.</p>
+  <div class="warn">Если непонятная надпись мелкая или расположена над кнопкой — это её <b>вторая функция</b> и работает она у кнопки.</div>
+  <div id="panelList"></div>
+</section>
+
+<section class="view" id="v-modes">
+  <p class="lead">У iS35 шесть рабочих режимов. Кнопки MODE — слева вверху. При включении аппарат сам встаёт в ARR.PLAY.</p>
+  <div id="modeList"></div>
+  <h2>Быстрое перемещение</h2>
+  <div class="card">
+    <ul>
+      <li><b>EXIT/NO</b> — назад на страницу 1 текущего режима; выход из подстраниц.</li>
+      <li><b>PAGE + / −</b> — листать страницы режима (номер виден на дисплее).</li>
+      <li><b>Демо</b> (16 демо-пьес): нажми одновременно <b>ARR.PLAY + B.SEQ</b>. Выбор демо — кнопками номеров; <b>START/STOP</b> — старт/стоп; <b>EXIT/NO</b> — выйти.</li>
+    </ul>
+  </div>
+</section>
+
+<section class="view" id="v-howto">
+  <p class="lead">Жми на задачу — внутри пошаговый порядок кнопок, как в официальном руководстве.</p>
+  <div id="howtoList"></div>
+</section>
+
+<section class="view" id="v-dict">
+  <p class="lead">Введи слово с экрана или кнопки — получишь перевод и подсказку.</p>
+  <input class="search" id="dictSearch" type="search" placeholder="Например: Arrangement, Fill, Write…">
+  <div id="dictList"></div>
+</section>
+
+<section class="view" id="v-ref">
+  <p class="lead">Как выбираются тембры и стили + полные списки.</p>
+  <details open><summary><span class="badge">П</span><span class="lbl">Как выбрать тембр (Program)<span class="en-sub en">Program / Program Change</span></span></summary>
+    <div class="det">
+      <p>Звуки iS35: <b>384 программы</b> — 6 банков (A, B, C, D, E, F) по 64, номера внутри банка <b>11–88</b>.</p>
+      <ul>
+        <li>Нажми кнопку нужной дорожки (VOLUME/PROGRAM), затем в секции <b>PROGRAM</b> — банк и двухзначный номер.</li>
+        <li>Банк F = <b>USER</b> — сюда сохраняются отредактированные тембры. Если нажать F дважды, на дисплее появится «Dr» — <b>наборы ударных</b>.</li>
+        <li>В банках A и B живут <b>128 General MIDI</b> звуков — их и ждут SMF-минусовки.</li>
+      </ul>
+    </div>
+  </details>
+  <h2>General MIDI — 128 звуков</h2>
+  <p class="lead">В iS35 это банки A (1–64) и B (65–128). Номер = стандартный GM-номер.</p>
+  <div class="card"><div class="grid" id="gmGrid"></div></div>
+  <h2>Стили (аккомпанемент)</h2>
+  <div class="card">
+    <p>В памяти <b>128 стилей ROM + 16 пользовательских</b>. Список ниже — банк B (стили B11–B88), как в руководстве (стр. 228).</p>
+    <div id="styleGroups"></div>
+  </div>
+  <h2>Keyboard Sets (наборы клавиатуры)</h2>
+  <div class="card">
+    <p>Мгновенная смена готовой настройки клавиатуры. <b>3 банка (A, B, C) × 5 наборов</b> — всего 15. Запись набора: настрой дорожки → <b>REC/WRITE/LYRICS</b> → Write Keyboard Set → <b>ENTER/YES</b>.</p>
+    <ul>
+      <li>Банк A — дефолтные наборы под вокал.</li>
+      <li>Банк B — дефолтные наборы под «чистую гитару».</li>
+      <li>Наборы хранят: дорожки клавиатуры, тембры, октавы, эффекты и настройки Vocal/Guitar.</li>
+    </ul>
+  </div>
+</section>
+
+<section class="view" id="v-disk">
+  <p class="lead">iS35 читает 3,5" дискеты <b>2DD/HD в формате MS-DOS</b> (как у ПК).</p>
+  <div class="danger"><b>Главное правило:</b> записи (Backing Sequence, Song, новые программы, Global) живут в памяти только пока включено питание. <b>Сохраняй на дискету перед выключением!</b></div>
+  <h2>Загрузка и сохранение (DISK/GLOBAL → Page 1)</h2>
+  <details><summary><span class="badge">↑</span><span class="lbl">Загрузить данные с дискеты</span></summary>
+    <div class="det">
+      <ol>
+        <li>Вставь дискету, нажми <b>DISK/GLOBAL</b>.</li>
+        <li>Page 1: <b>Load All</b> (всё) или <b>Load One</b> (один тип данных: аранжировка, стиль, программа, песня…), Load Global, Load Keyboard Set.</li>
+        <li><b>CURSOR</b> — выбрать файл/тип, <b>ENTER/YES</b> — подтвердить, <b>EXIT/NO</b> — отмена.</li>
+      </ol>
+    </div>
+  </details>
+  <details><summary><span class="badge">↓</span><span class="lbl">Сохранить данные на дискету</span></summary>
+    <div class="det">
+      <ol>
+        <li>Возьми чистую дискету, <b>не защищённую от записи</b> (одно закрытое окошко).</li>
+        <li><b>DISK/GLOBAL</b> → Page 1 → <b>Save</b>.</li>
+        <li>Выбери, что сохраняешь (аранжировки, BSQ — максимум 10, песня в SMF, Keyboard Set…).</li>
+        <li><b>ENTER/YES</b> для записи. «Completed» — готово.</li>
+      </ol>
+    </div>
+  </details>
+  <details><summary><span class="badge">S</span><span class="lbl">Сохранить песню как Standard MIDI File</span></summary>
+    <div class="det">
+      <p>Запиши песню в Song Edit → <b>Page: Save</b> → дискета в формате MS-DOS → <b>ENTER/YES</b>. Получишь обычный .MID, который читается компьютером.</p>
+    </div>
+  </details>
+  <details><summary><span class="badge">F</span><span class="lbl">Форматировать дискету</span></summary>
+    <div class="det">
+      <ol>
+        <li>Возьми новую 3,5" HD дискету или ту, с которой не жалко данных.</li>
+        <li>Дискета должна быть незащищённой: только <b>одно закрытое</b> окошко записи.</li>
+        <li><b>DISK/GLOBAL</b> → Page 1 → <b>Utility</b> → Format → <b>ENTER/YES</b>.</li>
+      </ol>
+    </div>
+  </details>
+  <details><summary><span class="badge">R</span><span class="lbl">Вернуть заводские данные</span></summary>
+    <div class="det">
+      <p>«Factory Preload Data» — официальный архив с сайта Korg (дискета 365 КБ). Запиши его файлы на дискету и загрузи через <b>Load All</b>. Совместимость: читаются дискеты и данные <b>i30, iS40, iS50, iS50B, i40M</b>.</p>
+    </div>
+  </details>
+  <h2>Если дискета не читается</h2>
+  <div class="card">
+    <ul>
+      <li><b>Disk error</b> — дискета защищена от записи: сдвинь окошко, чтобы закрылось одно.</li>
+      <li><b>Мусор/ошибка</b> — дискета не MS-DOS или повреждена; отформатируй на компьютере или замени.</li>
+      <li>Чисти привод специальной чистящей дискетой; отсутствие «клацанья» при вставке — нормально для этого привода.</li>
+      <li>Не вытаскивай дискету, пока мигает индикатор дисковода.</li>
+    </ul>
+  </div>
+</section>
+
+<section class="view" id="v-info">
+  <h2>Характеристики KORG iS35</h2>
+  <div class="card"><div class="grid">
+    <div class="card"><h4>Клавиатура</h4><p>61 клавиша, динамика + aftertouch</p></div>
+    <div class="card"><h4>Синтез</h4><p>AI2, 32 голоса (16 в double mode)</p></div>
+    <div class="card"><h4>Память PCM</h4><p>14 МБ ROM</p></div>
+    <div class="card"><h4>Эффекты</h4><p>2 стерео мульти-эффекта, 47 типов</p></div>
+    <div class="card"><h4>Программы</h4><p>320 в ROM + 64 USER, 14 + 2 drum kit</p></div>
+    <div class="card"><h4>Стили</h4><p>128 ROM + 16 USER</p></div>
+    <div class="card"><h4>Особое</h4><p>Vocal/Guitar-секция: микрофон, гармонайзер (iS35 = iS40 + Vocal Harmony)</p></div>
+    <div class="card"><h4>Годы выпуска</h4><p>Конец 1990-х (≈1998–99)</p></div>
+  </div></div>
+  <h2>Задняя панель</h2>
+  <div class="card">
+    <ul>
+      <li><b>OUTPUT L/MONO, R</b> — стерео выход на усилитель/микшер.</li>
+      <li><b>INPUT-IN</b> — вход микрофона/гитары для Vocal/Guitar-секции.</li>
+      <li><b>MIDI IN 1 / IN 2 / OUT / THRU</b> — при одном устройстве используй IN 1.</li>
+      <li><b>DAMPER</b> — педаль сустейна (Korg PS-1/PS-2).</li>
+      <li><b>ASSIGNABLE PEDAL/SWITCH</b> — программируемая педаль (XVP-10, EXP-2).</li>
+      <li><b>EC5</b> — внешний контроллер Korg EC5 (5 кнопок; Global Page 15).</li>
+    </ul>
+  </div>
+  <h2>Важное про память</h2>
+  <div class="card">
+    <ul>
+      <li>Аранжировки A–B — ROM, USER — RAM. Изменения живут в памяти только до выключения.</li>
+      <li><b>Свои данные сохраняй регулярно на дискету</b> — при сбое питания всё пропадает.</li>
+      <li>Через MIDI можно передать полный дамп данных (Global Page 22: MIDI Data Dump) на другой i-синт.</li>
+    </ul>
+  </div>
+  <h2>Если что-то не получается</h2>
+  <div class="card">
+    <ul>
+      <li><b>Нет звука</b> — проверь MASTER VOLUME, слайдеры дорожек, не включён ли MUTE (одновременное нажатие пары VOLUME-кнопок дорожки ставит/снимает mute).</li>
+      <li><b>START/STOP — только барабаны</b> — Chord Scanning в OFF (все LED погашены). Нажми LOWER (или LOWER+UPPER = FULL).</li>
+      <li><b>Аккорды справа не берутся</b> — Chord Scanning должен быть UPPER или FULL; в Fingered 2 играть минимум 3 ноты.</li>
+      <li><b>Слишком низкий левый звук</b> — выбери дорожку Lower и нажми OCTAVE +.</li>
+      <li><b>Всё «замучило»</b> — RESET возвращает секвенсор в начало и перезапускает детектор аккордов; в любой момент RESET = «MIDI Panic» (снимает застрявшие ноты).</li>
+      <li><b>Вернуть параметру заводское значение</b> — нажми <b>TEMPO/VALUE + и − одновременно</b>.</li>
+      <li><b>Демо играет само</b> — ты в Demo-режиме (случайно ARR.PLAY+B.SEQ). Нажми EXIT/NO.</li>
+    </ul>
+  </div>
+  <h2>Официальные источники</h2>
+  <div class="card">
+    <ul>
+      <li><a href="https://www.korg.com/us/support/download/product/1/280/">Страница загрузок Korg iS35</a> — User's Guide PDF (19.7 МБ), FAQ, Factory Preload Data ZIP.</li>
+      <li><a href="https://www.manualslib.com/manual/721616/Korg-Is35.html">Полный мануал онлайн (249 стр.)</a> — ManualsLib.</li>
+    </ul>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  Составлено по официальному руководству Korg iS35 User's Guide (AI2 Synthesis System).<br>
+  Файл автономен: работает офлайн, открывай в браузере телефона. Русифицировать сам синт нельзя — прошивка неизменяема.
+</footer>
+
+<script>
+const PANEL = [
+  {b:"1", en:"DISPLAY", ru:"Дисплей", d:`Показывает страницы редактирования, параметры и сообщения. <span class="mode">Подсказка:</span> если вокруг номера страницы есть стрелки &lt; или &gt; — есть другие страницы (листаются PAGE +/−); если стрелок нет — ты в подстранице, выход по EXIT/NO.`},
+  {b:"2", en:"VOLUME/PROGRAM", ru:"Громкость дорожек", d:`Кнопки идут <b>парами</b> (верхняя/нижняя) для каждой дорожки.<ul><li>Верхняя — громкость <b>+</b>, нижняя — <b>−</b>.</li><li>Одновременное нажатие пары = <b>MUTE</b> дорожки (повторное снимает mute).</li><li><span class="mode">ARR.PLAY:</span> дорожки аккомпанемента и клавиатуры; выбранной дорожке можно назначить другой тембр из секции PROGRAM.</li><li><span class="mode">B.SEQ:</span> то же; Extra Tracks — сначала TRK SELECT.</li><li><span class="mode">SONG PLAY / SONG EDIT:</span> каналы 1–8 ↔ 9–16 через TRK SELECT.</li><li><span class="mode">PROGRAM:</span> меняют значение параметра, стоящего у этих кнопок.</li></ul>`},
+  {b:"3", en:"TRK SELECT / ACC 1-3 MUTE", ru:"Выбор дорожек / заглушить аккомпанемент", d:`<ul><li><span class="mode">ARR.PLAY:</span> заглушить/вернуть дорожки ACC1, ACC2, ACC3.</li><li><span class="mode">B.SEQ:</span> «дорожки аранжировки» ↔ «Extra Tracks».</li><li><span class="mode">SONG PLAY / SONG EDIT:</span> каналы 1–8 ↔ 9–16.</li></ul>`},
+  {b:"4", en:"MODE", ru:"Режимы работы", d:`<ul><li><b>ARR.PLAY</b> — автоаккомпанемент (режим по умолчанию).</li><li><b>B.SEQ</b> — запись песни поверх автоаккомпанемента.</li><li><b>SONG PLAY</b> — минусовки SMF с диска, с текстом песни.</li><li><b>SONG EDIT</b> — многодорожечный редактор.</li><li><b>DISK/GLOBAL</b> — дискета, общие настройки, MIDI, педали.</li><li><b>PROGRAM</b> — одиночные тембры и их редактирование.</li><li>Демо: <b>ARR.PLAY + B.SEQ</b> одновременно.</li></ul>`},
+  {b:"5", en:"MEMORY-CHORD / TIE", ru:"Запомнить аккорд", d:`<span class="mode">ARR.PLAY, B.SEQ:</span> держит аккорд, когда убрал левую руку с клавиатуры. <b>TIE</b> (Step Recording): связывает ноту со следующей.`},
+  {b:"6", en:"MEMORY-LOW / HAR / REST", ru:"Запомнить нижние ноты / пауза", d:`<span class="mode">ARR.PLAY, B.SEQ, SONG PLAY:</span> удерживает ноты дорожки Lower и ноты гармонизации вокала. В Step Recording — пауза.`},
+  {b:"7", en:"BASS INV. / <", ru:"Обращение баса", d:`<span class="mode">ARR.PLAY, B.SEQ:</span> LED горит — самой низкой сыгранной нотой задаётся основной тон аккорда: играются «обращённые» аккорды вроде <b>Am7/G</b>, <b>F/C</b>. В Step Recording и Event Edit — шаг назад экрана/списка.`},
+  {b:"8", en:"SPLIT POINT / >", ru:"Точка разделения клавиатуры", d:`<ul><li>Зажми кнопку и сыграй клавишу — она станет границей: слева «левая рука» (Lower, аккорды), справа «правая» (Upper).</li><li>Точку можно сохранить в Global (Page 24: Write Global).</li><li>В Event Edit — переход к следующему событию.</li></ul>`},
+  {b:"9", en:"TEMPO (Lock)", ru:"Фиксация темпа", d:`LED горит — темп не изменится при смене аранжировки. Менять — TEMPO/VALUE (или колесо).`},
+  {b:"0", en:"SINGLE TOUCH", ru:"Моментальные звуки", d:`LED горит — при смене аранжировки автоматически подбираются тембры дорожек Upper 1, Upper 2, Lower.`},
+  {b:"A", en:"ARRANGEMENT", ru:"Аранжировки (банки и номера)", d:`<ul><li>Выбор: <b>BANK A / B / USER</b>, затем двухзначный номер <b>11–88</b> кнопками NUMBER 1–8.</li><li>Если банк уже выбран, номер вводится без BANK.</li><li><b>Preview:</b> жми BANK, листай список TEMPO/VALUE — имена видны до выбора; ENTER/YES подтвердит.</li><li>Страница 2 ARR.PLAY — теми же кнопками выбирается стиль.</li></ul>`},
+  {b:"B", en:"FADE IN/OUT", ru:"Плавное появление / уход", d:`Не касаясь START/STOP: жми FADE — аккомпанемент мягко «всплывает» из тишины; во время игры — мягко уходит в тишину.`},
+  {b:"C", en:"VARIATION 1–4", ru:"Вариации рисунка", d:`4 версии одного стиля разной плотности. В Step Recording — длительность вводимой ноты (значения подписаны под кнопками).`},
+  {b:"D", en:"FILL 1 / 2", ru:"Сбивки", d:`Во время игры — короткая связка-сбивка между фразами. У каждого стиля их две.`},
+  {b:"E", en:"INTRO / ENDING 1–2", ru:"Вступление / концовка", d:`<ul><li><b>Intro:</b> нажми ДО начала игры, возьми аккорд, START/STOP — начнётся с вступления.</li><li><b>Ending:</b> нажми ВО ВРЕМЯ игры — прозвучит концовка и остановка.</li><li>1-й вариант обычно богаче, 2-й проще.</li></ul>`},
+  {b:"F", en:"RESET / INS", ru:"Сброс / вставка", d:`<ul><li>Секвенсор — в начало первой доли.</li><li>Аккордовый детектор — перезапуск.</li><li>Всегда работает как <b>«MIDI Panic»</b>: зажалась нота — жми RESET.</li><li>Step Recording / ввод имени: <b>INS</b> вставляет событие/символ, DEL — удаляет.</li></ul>`},
+  {b:"G", en:"TAP TEMPO / DEL", ru:"Темп «на глаз»", d:`Отстучи кнопку в ритм — темп подстроится. В Step Recording/Event Edit — <b>DEL</b> (удалить выбранное).`},
+  {b:"H", en:"START/STOP", ru:"Старт / стоп", d:`Запуск/остановка аккомпанемента, песни или демо. Если светится LED REC — начинается/останавливается <b>запись</b>.`},
+  {b:"I", en:"SYNCHRO-START / STOP", ru:"Синхростарт / синхростоп", d:`<ul><li><b>SYNCHRO-START:</b> аккомпанемент стартует с первым сыгранным аккордом.</li><li><b>SYNCHRO-STOP:</b> сам останавливается, когда левая рука уходит с клавиатуры.</li><li>Обе вместе (SONG PLAY) — отключение клавиатуры от минусовки (Mute Keyboard).</li></ul>`},
+  {b:"J", en:"REC/WRITE/LYRICS", ru:"Запись / сохранение / текст песни", d:`<ul><li><span class="mode">B.SEQ, SONG EDIT:</span> включить режим записи.</li><li><span class="mode">ARR.PLAY, PROGRAM:</span> страница сохранения (Write) аранжировки/Keyboard Set/программы.</li><li><span class="mode">SONG PLAY:</span> Lyrics 1 → Lyrics 2 → обычный экран.</li><li><span class="mode">GLOBAL:</span> Write Global.</li></ul>`},
+  {b:"K", en:"PAGE + / −", ru:"Страницы", d:`Листать страницы текущего режима. Номер — справа на дисплее.`},
+  {b:"L", en:"CURSOR", ru:"Курсор", d:`Двигают мигающий курсор по параметрам. Меняется только то, на чём стоит мигающий курсор.`},
+  {b:"M", en:"TEMPO/VALUE + DIAL", ru:"Темп и значения", d:`Меняют темп либо величину параметра. <b>+ и − одновременно</b> = вернуть записанное/заводское значение.`},
+  {b:"N", en:"EXIT/NO", ru:"Назад / нет", d:`Вернуться на страницу 1, выйти из подстраниц, «нет» на вопросы дисплея. В ARR.PLAY — вернуть дорожкам настройки, сохранённые в аранжировке.`},
+  {b:"O", en:"ENTER/YES", ru:"Да / подтвердить", d:`Подтверждение операций (Load, Save, Format, MIDI Setup). В SONG PLAY — добавить песню в JukeBox.`},
+  {b:"P", en:"KEYBOARD MODE", ru:"Как звук работает на клавиатуре", d:`<ul><li><b>FULL UPPER:</b> тембры на всей клавиатуре.</li><li><b>SPLIT:</b> левая (Lower) и правая (Upper 1/2) зоны. Upper 2 и Lower не звучат одновременно.</li><li><b>M.DRUM:</b> клавиатура = набор ударных.</li></ul>`},
+  {b:"Q", en:"KEYBOARD ASSIGN", ru:"Вкл/выкл дорожек клавиатуры", d:`Включают/выключают <b>Upper 1</b>, <b>Upper 2</b>, <b>Lower</b>. LED = дорожка активна. Upper 2 и Lower взаимно исключают друг друга.`},
+  {b:"R", en:"CHORD SCANNING", ru:"Зона распознавания аккордов", d:`<ul><li><b>LOWER:</b> аккорды слева (под точкой разделения); режим — Global Page 17.</li><li><b>UPPER:</b> аккорды справа; всегда Fingered 2 (3+ ноты).</li><li><b>FULL (LOWER+UPPER):</b> по всей клавиатуре.</li><li><b>Оба LED выкл:</b> аккорды не распознаются — играют только Drum и Perc.</li></ul>`},
+  {b:"S", en:"ENSEMBLE", ru:"Ансамбль (гармонизация мелодии)", d:`В ARR.PLAY и B.SEQ — мелодия правой руки гармонизуется по аккордам левой. Работает при Chord Scanning = LOWER.`},
+  {b:"T", en:"SUSTAIN", ru:"Затяжка нот", d:`Удлиняет ноты (расширяет сустейн тембра) — как педаль рояля.`},
+  {b:"U", en:"VOCAL/GUITAR", ru:"Вокал/гитара", d:`<ul><li>Микрофон/гитара — в разъём <b>INPUT-IN</b>, чувствительность — слайдер <b>GAIN</b>.</li><li>Зелёный <b>SIGNAL</b> — сигнал есть; оранжевый — перегруз, убери GAIN.</li><li>Пресет <b>VOC/GTR MODE</b>, <b>A/B</b> — две настройки пресета.</li><li>В режиме <b>Vocal</b> доступен <b>гармонайзер</b>; ноты гармонии держит MEMORY-LOW/HAR.</li><li>Настройки хранятся в <b>Keyboard Sets</b>.</li></ul>`},
+  {b:"V", en:"MASTER VOLUME", ru:"Общая громкость", d:`Динамики + наушники + OUTPUT. Не влияет на Vocal/Guitar вход — у него свой GAIN.`},
+  {b:"W", en:"TRACK VOLUME", ru:"Слайдеры громкости дорожек", d:`8 слайдеров мгновенной подстройки баланса дорожек.`},
+  {b:"X", en:"OCTAVE + / −", ru:"Октавы", d:`Сдвиг дорожек клавиатуры (Upper 1 / Upper 2 / Lower) на октаву. Левый звук глухо низит — выбери Lower и жми OCTAVE +.`},
+  {b:"Y", en:"TRANSPOSE", ru:"Транспонирование", d:`Шаг = <b>1 полутон</b>. Сдвигается весь инструмент. Удобно подстроить под голос.`}
+];
+
+const MODES = [
+  {n:"ARR.PLAY", ru:"Автоаккомпанемент", d:"Главный режим: стили, аранжировки, дорожки Drum/Perc/бас/аккорды, гармонайзер, Keyboard Sets.", b:"Ключевые кнопки: START/STOP, SYNCHRO-START/STOP, FILL 1/2, INTRO/ENDING, VARIATION 1–4, FADE, ARRANGEMENT, CHORD SCANNING, KEYBOARD MODE/ASSIGN, OCTAVE, SINGLE TOUCH, ENSEMBLE."},
+  {n:"B.SEQ", ru:"Песня поверх автоаккомпанемента", d:"Секвенсор «Backing Sequence»: запись игры с автоаккомпанементом, монтаж тактов (Delete/Insert/Copy/Quantize), сохранение как BSQ (до 10) или конвертация в SMF.", b:"Рекорд: REC/WRITE/LYRICS. Шаг-запись: TIE (MEMORY-CHORD/TIE), REST (MEMORY-LOW/HAR/REST), длительность — VARIATION/FILL/INTRO-ENDING."},
+  {n:"SONG PLAY", ru:"Минусовки SMF", d:"Воспроизведение Standard MIDI File прямо с дискеты. Показывает текст песни в форматах M-Live, Solton, Tune 1000, Edirol, GEM GMX, KAR, HitBit, Yamaha XF. JukeBox — автосмена песен.", b:"Текст: REC/WRITE/LYRICS переключает Lyrics 1 / Lyrics 2 / Play."},
+  {n:"SONG EDIT", ru:"Многодорожечный редактор", d:"16-дорожечный секвенсор: запись, Event Edit, Quantize, замена тембров дорожек, сохранение в SMF на дискету.", b:"Страницы листаются PAGE +/−: Playback, Recording, Track Parameters, Event Edit, Save…"},
+  {n:"DISK/GLOBAL", ru:"Дискета и общие настройки", d:"Load/Save/Format, Factory Preload, 25 страниц настроек: MIDI-каналы, педали, EC5, Chord Recognition, гаммы (вкл. арабскую), Joystick, Calibration, MIDI Data Dump, Write Global.", b:"ENTER/YES — подтвердить; EXIT/NO — отмена/выход."},
+  {n:"PROGRAM", ru:"Тембры и их редактирование", d:"384 программы в 6 банках (A–F; F = USER + drum kits «Dr»). Редактор: осцилляторы, VDF/VDA, огибающие, вибрато, контроллеры, эффекты, Rename, Write в USER.", b:"REC/WRITE/LYRICS — страница сохранения тембра."},
+  {n:"DEMO", ru:"Демо-режим", d:"16 демо-пьес. Вход: ARR.PLAY + B.SEQ. Демо 1–8 — ARRANGEMENT NUMBER; 9–16 — PROGRAM NUMBER. Стоп/старт: START/STOP. Выход: EXIT/NO."}
+];
+
+const HOWTO = [
+  {t:"Сыграть с автоаккомпанементом (первый раз)", steps:[
+    "Включи питание — iS35 сам в режиме <b>ARR.PLAY</b>. Подними <b>MASTER VOLUME</b>.",
+    "Выбери <b>аранжировку</b>: BANK (A / B / USER) + двухзначный номер 11–88 (кнопки NUMBER 1–8).",
+    "Включи <b>SINGLE TOUCH</b> (LED горит) — тембры подберутся сами.",
+    "Включи <b>SYNCHRO-START</b> — аккомпанемент заведётся с первого аккорда.",
+    "Убедись, что <b>CHORD SCANNING = LOWER</b>: аккорды — слева, мелодия — справа.",
+    "Играй! Рядом полезны: <b>FILL 1/2</b>, <b>VARIATION 1–4</b>, <b>INTRO/ENDING</b>, <b>FADE</b>.",
+    "Темп — <b>TEMPO/VALUE</b> (или колесо). Зафиксировать при смене аранжировки — LED <b>TEMPO (Lock)</b>.",
+    "Стоп: <b>START/STOP</b>. Залипла нота: <b>RESET</b>."
+  ]},
+  {t:"Сменить тембр (звук) на дорожке клавиатуры", steps:[
+    "В <b>ARR.PLAY</b> нажми кнопку пары <b>VOLUME/PROGRAM</b> нужной дорожки (Upper 1 / Upper 2 / Lower) — дорожка выбрана.",
+    "В секции <b>PROGRAM</b> выбери банк (A–F) и двухзначный номер 11–88.",
+    "Нужна другая высота — <b>OCTAVE +/−</b>.",
+    "Помни: Upper 2 и Lower не звучат одновременно — это не глюк."
+  ]},
+  {t:"Наложение двух тембров / разделение клавиатуры", steps:[
+    "<b>Наложение:</b> KEYBOARD ASSIGN — включи сразу <b>Upper 1 + Upper 2</b>.",
+    "<b>Вся клавиатура одним тембром:</b> KEYBOARD MODE → <b>FULL UPPER</b>.",
+    "<b>Разделение:</b> KEYBOARD MODE → <b>SPLIT</b>; точку задаёшь: зажми <b>SPLIT POINT</b> и нажми клавишу.",
+    "<b>Барабаны на клавиатуре:</b> KEYBOARD MODE → <b>M.DRUM</b> (набор ударных: дважды F в PROGRAM — на дисплее «Dr»)."
+  ]},
+  {t:"Транспонировать (сменить тональность)", steps:[
+    "Кнопками <b>TRANSPOSE − / +</b> сдвигай по полутону.",
+    "Сдвигается весь инструмент: и аккомпанемент, и клавиатура.",
+    "Подстройка в октавах без смены тональности — <b>OCTAVE</b>.",
+    "Под вокал: пой и сдвигай, пока не сядет по голосу."
+  ]},
+  {t:"Записать песню с автоаккомпанементом (Backing Sequence)", steps:[
+    "Нажми <b>B.SEQ</b>.",
+    "Выбери <b>аранжировку</b> (BANK + номер), настрой дорожки и тембры.",
+    "Нажми <b>REC/WRITE/LYRICS</b> — загорится LED записи.",
+    "Старт: <b>SYNCHRO-START</b> (с первого аккорда) или <b>START/STOP</b>.",
+    "Играй; VARIATION/FILL тоже пишутся.",
+    "Стоп: <b>START/STOP</b>. Прослушать: <b>RESET</b>, потом <b>START/STOP</b>.",
+    "Ошибка по ходу: <b>RESET</b> и запись заново.",
+    "<b>BSQ стирается при выключении:</b> вставь дискету MS-DOS, <b>DISK/GLOBAL → Page 1 → Save</b>, слот BSQ (до 10), <b>ENTER/YES</b>.",
+    "Позже можно перевести в .MID (страница SMF Converter) и докрутить в SONG EDIT."
+  ]},
+  {t:"Играть минусовку с дискеты (SMF) + караоке", steps:[
+    "Вставь дискету с .MID-файлами, нажми <b>SONG PLAY</b>.",
+    "<b>TEMPO/VALUE</b> (или колесо) — выбрать песню.",
+    "<b>START/STOP</b> — воспроизведение сразу, без загрузки.",
+    "Текст песни (M-Live, Solton, Tune 1000, Edirol, GMX, KAR, HitBit, XF): жми <b>REC/WRITE/LYRICS</b> — Lyrics 1 / Lyrics 2 / обычный экран.",
+    "Тембр дорожки меняется на ходу: кнопка дорожки → секция PROGRAM.",
+    "JukeBox: встать на песню, <b>ENTER/YES</b> — добавить в список."
+  ]},
+  {t:"Записать многодорожечную песню (SONG EDIT)", steps:[
+    "Нажми <b>SONG EDIT</b>, дойди до страницы <b>Recording</b> (PAGE +/−).",
+    "<b>REC/WRITE/LYRICS</b> — LED записи — <b>START/STOP</b> — играй партию.",
+    "Дорожку выбирай кнопками VOLUME/PROGRAM (вторые 8 — сначала <b>TRK SELECT</b>).",
+    "Сохрани: страница <b>Save</b> → дискета MS-DOS → <b>ENTER/YES</b>. Получишь стандартный .MID.",
+    "SMF с компьютера грузится через Page: Load — и редактируется (Event Edit, Quantize)."
+  ]},
+  {t:"Настроить микрофон / вокал-гармонию", steps:[
+    "Микрофон — в разъём <b>INPUT-IN</b>.",
+    "Слайдер <b>GAIN</b>: зелёный <b>SIGNAL</b> — норма; оранжевый — перегруз, опусти GAIN.",
+    "Выбери пресет <b>VOC/GTR MODE</b>; переключение двух его настроек — <b>A/B</b>.",
+    "<b>Гармонайзер</b> — только в режиме Vocal; ноты гармонии держит <b>MEMORY-LOW/HAR</b>.",
+    "Настройки сохраняются в <b>Keyboard Sets</b>: <b>REC/WRITE/LYRICS → Write Keyboard Set</b>."
+  ]},
+  {t:"Создать свой тембр и сохранить в USER", steps:[
+    "Выбери похожий тембр, нажми <b>PROGRAM</b>.",
+    "Страницы редактора: PAGE +/− (осцилляторы, VDF, VDA, вибрато, контроллеры, эффекты…).",
+    "<b>CURSOR</b> — куда встать, <b>TEMPO/VALUE</b> (или колесо) — значение.",
+    "Ошибся: <b>TEMPO/VALUE + и − одновременно</b> — вернуть исходное.",
+    "Сохранение: <b>REC/WRITE/LYRICS</b> (Write) → место в банке <b>F (USER)</b> → <b>ENTER/YES</b>.",
+    "Имя: страница <b>Rename Program</b> (CURSOR на символ, TEMPO/VALUE — буква)."
+  ]},
+  {t:"Настроить, чтобы аккорды распознавались удобно", steps:[
+    "<b>DISK/GLOBAL</b> → PAGE до <b>Page 17: Chord Recognition Mode</b>.",
+    "Варианты: One Finger (аккорд одной нотой), Fingered 1/2 (в Fingered 2 — минимум 3 ноты).",
+    "<b>«Обращённые» аккорды</b> (Am7/G, F/C): включи <b>BASS INV.</b>.",
+    "Зону (LOWER / UPPER / FULL) переключай сразу в секции <b>CHORD SCANNING</b>."
+  ]},
+  {t:"Сбережение данных: что и когда сохранять", steps:[
+    "Память USER стирается при выключении: новые программы (F), отредактированные аранжировки, Keyboard Sets, Global.",
+    "Перед каждым выключением: <b>DISK/GLOBAL → Page 1 → Save</b>.",
+    "Одна дискета = один проект: Load All / Load One — вернуть всё одним махом.",
+    "Восстановить заводское: <b>Factory Preload Data</b> с сайта Korg (дискета 365 КБ) → Load All."
+  ]}
+];
+
+const DICT = [
+  ["ACC1/ACC2/ACC3","Дорожки аккомпанемента (сверх ударных)","Заглушаются кнопкой TRK SELECT/ACC1-3 MUTE"],
+  ["Aftertouch","Посленажатие (давление на клавишу после нажатия)",""],
+  ["AI2","Синтез-система Korg (основа звука iS35)",""],
+  ["Arrangement","Аранжировка: стиль + тембры + громкости","Банки A, B, USER; номера 11–88"],
+  ["Backing Sequence (BSQ)","Песня, записанная поверх автоаккомпанемента","До 10 в памяти; стирается без сохранения"],
+  ["Bank","Банк","Программы: A–F; аранжировки: A/B/USER; Keyboard Set: A/B/C"],
+  ["Bass Inversion","Обращение (бас-нота в аккорде)","Кнопка BASS INV."],
+  ["Chord Scanning","Зона распознавания аккордов","LOWER / UPPER / FULL; OFF = только ударные"],
+  ["Chord Recognition Mode","Способ распознавания аккордов","Global Page 17: One Finger, Fingered 1/2…"],
+  ["Copy","Копировать","В редакторах: Copy measures/BS"],
+  ["Cursor","Курсор (мигающее поле на дисплее)","Меняется только то, на чём курсор"],
+  ["Damper","Педаль сустейна","Полярность — Global Page 18"],
+  ["Detune","Расстройка (микротон)","iS35 умеет снижать отдельные ноты на ¼ тона (арабская гамма)"],
+  ["Dr","«Dr» на дисплее = наборы ударных","Банк F / PROGRAM дважды"],
+  ["Drum Mapping","Схема ударных инструментов по клавишам",""],
+  ["EC5","Внешний 5-кнопочный контроллер Korg","Global Page 15"],
+  ["Ensemble","Автогармонизация мелодии аккордами","Кнопка ENSEMBLE"],
+  ["Erase","Стереть (событие, такт, дорожку)","Кнопка DEL в редакторах"],
+  ["Event Edit","Редактор MIDI-событий","Ноты, контроллеры, Program Change"],
+  ["Fade In/Out","Плавное появление/уход аккомпанемента","Кнопка FADE IN/OUT"],
+  ["Fill","Сбивка","FILL 1/2"],
+  ["Fingered 1/2","Режимы «многонотного» распознавания аккордов","Fingered 2 требует 3 ноты"],
+  ["Format","Форматирование дискеты","Disk/Global → Utility"],
+  ["Full Upper","Тембр(ы) на всей клавиатуре","KEYBOARD MODE → FULL UPPER"],
+  ["Global channel","Особый MIDI-канал: управление iS35 извне",""],
+  ["GM (General MIDI)","Стандарт 128 инструментов","В iS35 — банки A и B"],
+  ["Intro/Ending","Вступление/концовка","INTRO/ENDING 1–2"],
+  ["Joystick","Джойстик (слева от клавиатуры): модуляция/питч","Настройка — Global Page 23"],
+  ["JukeBox","Автоплей-список песен","SONG PLAY: ENTER/YES на песне"],
+  ["Keyboard Set","Готовый набор клавиатуры","3 банка × 5 наборов"],
+  ["M.DRUM","Барабаны на клавиатуре","KEYBOARD MODE → M.DRUM"],
+  ["Master Transpose","Глобальное транспонирование","TRANSPOSE +/− , по полутону"],
+  ["Master Tuning","Общая настройка высоты (Гц)","Global Page 2"],
+  ["MIDI Panic","Сброс всех MIDI-нот","Кнопка RESET в любой момент"],
+  ["Mute","Заглушить дорожку","Одновременное нажатие пары VOLUME/PROGRAM"],
+  ["OCTAVE","Сдвиг дорожки на октаву","OCTAVE +/−"],
+  ["Program Change (PC)","Смена тембра по MIDI","Совместно с Bank Select (BS MSB/LSB)"],
+  ["Preview","Предпросмотр аранжировки до выбора","BANK + TEMPO/VALUE, ENTER/YES"],
+  ["Program","Тембр (одиночный звук)","384: A–E заводские, F = USER"],
+  ["Quantize","Выравнивание нот по сетке","Edit 2: Quantize"],
+  ["REC/WRITE","Запись/сохранение","REC/WRITE/LYRICS"],
+  ["Reset","Сброс в начало","Кнопка RESET"],
+  ["Scale (Main/Sub/User)","Гаммы, вкл. нестандартные (арабская и т.п.)","Global Pages 19–21"],
+  ["SMF (Standard MIDI File)","Стандартный MIDI-файл .mid","Сохраняется и воспроизводится iS35"],
+  ["Single Touch","Автоподбор тембров при смене аранжировки","Кнопка SINGLE TOUCH"],
+  ["SMF Converter","Перевод Backing Sequence → SMF","B.SEQ"],
+  ["Song Play","Проигрывание SMF с диска","Текст песни (Lyrics) поддерживается"],
+  ["Split Point","Точка разделения клавиатуры","Зажать SPLIT POINT + клавиша"],
+  ["Step Recording","Пошаговый ввод нот","TIE/REST/длительности — на служебных кнопках"],
+  ["Style","Стиль (рисунок аккомпанемента)","128 ROM + 16 USER"],
+  ["Sustain","Затяжка нот","Кнопка SUSTAIN / педаль DAMPER"],
+  ["Synchro-Start/Stop","Старт с первым аккордом / стоп при уходе руки",""],
+  ["TAP TEMPO","Задать темп отстукиванием","Кнопка TAP TEMPO/DEL"],
+  ["Tempo Lock","Фиксация темпа","Кнопка TEMPO (LED)"],
+  ["Track (Trk)","Дорожка (канал MIDI или секвенсора)","VOLUME/PROGRAM + TRK SELECT"],
+  ["Transpose","Транспонирование (сдвиг тональности)","TRANSPOSE +/−"],
+  ["Upper 1 / Upper 2","Правые дорожки клавиатуры (можно обе сразу)","KEYBOARD ASSIGN"],
+  ["User","Пользовательская память (RAM)","Стирается при выключении — сохраняй!"],
+  ["Variation","Вариация стиля (плотность бита)","VARIATION 1–4"],
+  ["VDF / VDA","Фильтр / усилитель голоса (редактор тембров)","Program Mode"],
+  ["Velocity","Сила удара по клавише (динамика)",""],
+  ["Vocal/Guitar","Секция обработки микрофона/гитары","INPUT-IN, GAIN, VOC/GTR MODE, A/B"],
+  ["Write","Сохранить изменения в память","REC/WRITE/LYRICS → ENTER/YES"],
+  ["Write Global","Заложить глобальные настройки","Global Page 24"]
+];
+
+const STYLES = [
+  ["Traditional 1", ["Waltz","Mazurka","Polka German","Waltz","Laendler German","Polka","W. Musette Fr.","March"]],
+  ["Traditional 2", ["Wiener Waltz","Slow Waltz 1","Slow Waltz 2","Operetta","Fox Trot","Club Fox","Quick Step","Charleston"]],
+  ["Jazz", ["Big Band 40's","Big Band","Fast Big Band","Latin Big Band","Broadway","Hollywood","Jazz Waltz","5/4 Swing"]],
+  ["Jazz & Funk", ["Ballad Medium Swing","Be Bop","Acid Jazz","Latin Jazz","Still Life","Party Funk","Groove"]],
+  ["Rhythm & Blues", ["R & B","6/8 Blues","Gospel","Blues Shuffle","Pop Shuffle","Uncle Funk","Get Funked","Electric Funk"]],
+  ["Rock", ["Light Rock","Pop Rock","Open Rock","Heavy Rock","Rock Ballad","Half Time","Rock & Roll","Rock Hip Hop"]],
+  ["World Music 1", ["Country","Country Beat","Country Ballad","Dixieland","On The Bridge","Tarantella","Sevillana","Gipsy"]],
+  ["World Music 2", ["9/8 Roman","Ciftetelli","Mariachi","Raspa","Venezia","Minuetto","Bolero","New Age"]]
+];
+
+const GM = ["Acoustic Grand Piano","Bright Acoustic Piano","Electric Grand Piano","Honky-tonk Piano","Electric Piano 1","Electric Piano 2","Harpsichord","Clavi","Celesta","Glockenspiel","Music Box","Vibraphone","Marimba","Xylophone","Tubular Bells","Dulcimer","Drawbar Organ","Percussive Organ","Rock Organ","Church Organ","Reed Organ","Accordion","Harmonica","Tango Accordion","Acoustic Guitar (nylon)","Acoustic Guitar (steel)","Electric Guitar (jazz)","Electric Guitar (clean)","Electric Guitar (muted)","Overdriven Guitar","Distortion Guitar","Guitar Harmonics","Acoustic Bass","Electric Bass (finger)","Electric Bass (pick)","Fretless Bass","Slap Bass 1","Slap Bass 2","Synth Bass 1","Synth Bass 2","Violin","Viola","Cello","Contrabass","Tremolo Strings","Pizzicato Strings","Orchestral Harp","Timpani","String Ensemble 1","String Ensemble 2","Synth Strings 1","Synth Strings 2","Choir Aahs","Voice Oohs","Synth Choir","Orchestra Hit","Trumpet","Trombone","Tuba","Muted Trumpet","French Horn","Brass Section","Synth Brass 1","Synth Brass 2","Soprano Sax","Alto Sax","Tenor Sax","Baritone Sax","Oboe","English Horn","Bassoon","Clarinet","Piccolo","Flute","Recorder","Pan Flute","Blown Bottle","Shakuhachi","Whistle","Ocarina","Lead 1 (square)","Lead 2 (sawtooth)","Lead 3 (calliope)","Lead 4 (chiff)","Lead 5 (charang)","Lead 6 (voice)","Lead 7 (fifths)","Lead 8 (bass+lead)","Pad 1 (new age)","Pad 2 (warm)","Pad 3 (polysynth)","Pad 4 (choir)","Pad 5 (bowed)","Pad 6 (metallic)","Pad 7 (halo)","Pad 8 (sweep)","FX 1 (rain)","FX 2 (soundtrack)","FX 3 (crystal)","FX 4 (atmosphere)","FX 5 (brightness)","FX 6 (goblins)","FX 7 (echoes)","FX 8 (sci-fi)","Sitar","Banjo","Shamisen","Koto","Kalimba","Bagpipe","Fiddle","Shanai","Tinkle Bell","Agogo","Steel Drums","Woodblock","Taiko Drum","Melodic Tom","Synth Drum","Reverse Cymbal","Guitar Fret Noise","Breath Noise","Seashore","Bird Tweet","Telephone Ring","Helicopter","Applause","Gunshot"];
+
+function el(tag, attrs = {}, html = ""){
+  const node = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, v);
+  node.innerHTML = html;
+  return node;
+}
+
+const panelList = document.getElementById("panelList");
+PANEL.forEach(p => {
+  panelList.appendChild(el("details", {}, `
+    <summary><span class="badge">${p.b}</span><span class="lbl">${p.ru}<span class="en-sub en">${p.en}</span></span></summary>
+    <div class="det">${p.d}</div>`));
+});
+
+const modeList = document.getElementById("modeList");
+MODES.forEach(m => {
+  modeList.appendChild(el("details", {}, `
+    <summary><span class="badge">&#9670;</span><span class="lbl">${m.ru}<span class="en-sub en">${m.n}</span></span></summary>
+    <div class="det"><p>${m.d}</p>${m.b ? `<p>${m.b}</p>` : ""}</div>`));
+});
+
+const howtoList = document.getElementById("howtoList");
+HOWTO.forEach(s => {
+  const steps = s.steps.map((t, i) =>
+    `<div class="step"><span class="n">${i + 1}</span><span class="b">${t}</span></div>`).join("");
+  howtoList.appendChild(el("details", {}, `
+    <summary><span class="badge">&#9654;</span><span class="lbl">${s.t}</span></summary>
+    <div class="det">${steps}</div>`));
+});
+
+const dictList = document.getElementById("dictList");
+function renderDict(filter = ""){
+  dictList.innerHTML = "";
+  const q = filter.trim().toLowerCase();
+  DICT.filter(([en, ru]) => !q || en.toLowerCase().includes(q) || ru.toLowerCase().includes(q))
+    .forEach(([en, ru, note]) => {
+      dictList.appendChild(el("details", {}, `
+        <summary><span class="badge">S</span><span class="lbl">${en}<span class="en-sub">&#8594; ${ru}</span></span></summary>
+        <div class="det">${note ? note : "См. разделы «Панель» и «Как сделать»."}</div>`));
+    });
+  if (!dictList.children.length)
+    dictList.appendChild(el("div", {class:"lead"}, "Ничего не нашлось. Попробуй другое слово или загляни в «Панель»."));
+}
+renderDict();
+document.getElementById("dictSearch").addEventListener("input", e => renderDict(e.target.value));
+
+const gmGrid = document.getElementById("gmGrid");
+GM.forEach((name, i) => {
+  gmGrid.appendChild(el("div", {class:"card"}, `<h4>${i + 1}</h4><p>${name}</p>`));
+});
+
+const styleGroups = document.getElementById("styleGroups");
+STYLES.forEach(([group, names], gi) => {
+  const rows = names.map((n, i) => `<tr><td><b>B${gi + 1}${i + 1}</b></td><td>${n}</td></tr>`).join("");
+  styleGroups.appendChild(el("div", {}, `<h4 style="margin:10px 0 2px;color:var(--accent)">${group}</h4>
+    <table><tr><th>&#8470;</th><th>Название</th></tr>${rows}</table>`));
+});
+
+document.getElementById("nav").addEventListener("click", e => {
+  const btn = e.target.closest("button");
+  if (!btn) return;
+  document.querySelectorAll("#nav button").forEach(b => b.classList.toggle("active", b === btn));
+  document.querySelectorAll("section.view").forEach(s =>
+    s.classList.toggle("active", s.id === "v-" + btn.dataset.v));
+  window.scrollTo({top: 0});
+});
+</script>
+</body>
+</html>
