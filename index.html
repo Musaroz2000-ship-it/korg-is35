@@ -1051,41 +1051,66 @@ function fmtNet(t){
 let netCtrl = null;
 let netNext = 0;
 
-function askNet(q){
+function readSSE(r, onChunk){
+  const dec = new TextDecoder();
+  let buf = "", out = "";
+  const rd = r.body.getReader();
+  return new Promise(res => {
+    const step = () => rd.read().then(({done, value}) => {
+      if (done){ res(out); return; }
+      buf += dec.decode(value, {stream: true});
+      const lines = buf.split("\n");
+      buf = lines.pop();
+      lines.forEach(line => {
+        const t = line.replace(/^data:\s*/, "").trim();
+        if (!t || t === "[DONE]") return;
+        try {
+          const d = JSON.parse(t);
+          const ch = d.choices && d.choices[0];
+          const piece = ch && ((ch.delta && ch.delta.content) || (ch.message && ch.message.content));
+          if (piece){ out += piece; onChunk(out); }
+        } catch(e){}
+      });
+      step();
+    }).catch(() => res(out));
+    step();
+  });
+}
+
+function askNet(q, onChunk){
   if (netCtrl) try { netCtrl.abort(); } catch(e){}
   netCtrl = new AbortController();
-  const ok = setTimeout(() => netCtrl.abort(), 30000);
+  const ok = setTimeout(() => netCtrl.abort(), 60000);
   const pull = () => { clearTimeout(ok); netCtrl = null; };
-  return new Promise((res, rej) => {
+  return new Promise(res => {
     const c = netCtrl;
     fetch("https://text.pollinations.ai/openai", {
       method: "POST",
       headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({messages: [{role: "system", content: NETSYS}, {role: "user", content: q}]}),
+      body: JSON.stringify({messages: [{role: "system", content: NETSYS}, {role: "user", content: q}], stream: true}),
       signal: c.signal
     }).then(r => {
       if (r.status === 402 || r.status === 429){ netNext = Date.now() + 46000; return Promise.reject("busy"); }
-      if (r.status < 200 || r.status >= 300) return Promise.reject("fail");
-      return r.json();
-    }).then(d => {
-      const t = d && d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content;
-      if (!t) throw new Error("empty");
+      if (r.status < 200 || r.status >= 300 || !r.body) return Promise.reject("fail");
+      return readSSE(r, onChunk);
+    }).then(out => {
+      if (!out || !out.trim()) return Promise.reject("fail");
       netNext = Date.now() + 46000;
-      pull(); res(t);
+      pull(); res(out);
     }).catch(reason => {
-      if (reason === "busy"){ pull(); rej(new Error("busy")); return; }
+      if (reason === "busy"){ pull(); res(null); return; }
       fetch("https://text.pollinations.ai/" + encodeURIComponent(q) + "?system=" + encodeURIComponent(NETSYS), {signal: c.signal})
         .then(r => {
-          if (r.status === 402 || r.status === 429){ netNext = Date.now() + 46000; pull(); rej(new Error("busy")); return Promise.reject("stop"); }
+          if (r.status === 402 || r.status === 429){ netNext = Date.now() + 46000; pull(); res(null); return Promise.reject("stop"); }
           if (r.status < 200 || r.status >= 300) return Promise.reject("fail");
           return r.text();
         }).then(t => {
-          if (!t || t.length < 2 || /^\s*(rate limit|error|payment|not found|40\d)/i.test(t)) { pull(); rej(new Error("bad")); return; }
+          if (!t || t.length < 2 || /^\s*(rate limit|error|payment|not found|40\d)/i.test(t)) { pull(); res(null); return; }
           netNext = Date.now() + 46000;
           pull(); res(t);
-        }).catch(e => {
-          if (e === "stop") return;
-          pull(); rej(new Error("netfail"));
+        }).catch(() => {
+          if (reason === "stop") return;
+          pull(); res(null);
         });
     });
   });
@@ -1117,13 +1142,18 @@ function botAnswer(q){
       chatLog.scrollTop = chatLog.scrollHeight;
       return;
     }
-    askNet(q).then(t => {
+    askNet(q, txt => {
+      bubble.innerHTML = fmtNet(txt);
+      chatLog.scrollTop = chatLog.scrollHeight;
+    }).then(t => {
+      if (!t){
+        offlineAnswer(bubble, q);
+        bubble.insertAdjacentHTML("beforeend", '<div class="more">Нейросеть сейчас не ответила (либо лимит бесплатного сервиса — один вопрос в 45 секунд, либо сервис недоступен). Это ответ офлайн-поиска — попробуй нейросеть ещё раз примерно через минуту.</div>');
+        chatLog.scrollTop = chatLog.scrollHeight;
+        return;
+      }
       bubble.innerHTML = fmtNet(t);
       suggest();
-      chatLog.scrollTop = chatLog.scrollHeight;
-    }).catch(() => {
-      offlineAnswer(bubble, q);
-      bubble.insertAdjacentHTML("beforeend", '<div class="more">Нейросеть сейчас не ответила (либо лимит бесплатного сервиса — один вопрос в 45 секунд, либо сервис недоступен). Это ответ офлайн-поиска — попробуй нейросеть ещё раз примерно через минуту.</div>');
       chatLog.scrollTop = chatLog.scrollHeight;
     });
     return;
