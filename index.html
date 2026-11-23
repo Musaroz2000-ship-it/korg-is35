@@ -110,6 +110,11 @@
   .inbar input::placeholder{color:var(--muted)}
   .send{flex:none; width:40px; height:40px; border:none; border-radius:50%; background:linear-gradient(135deg, var(--accent), #ffbd4f); color:#141414; font-size:16px; font-weight:700; cursor:pointer; display:grid; place-items:center; box-shadow:0 2px 10px rgba(245,166,35,.3)}
   .send:active{opacity:.75; transform:scale(.95)}
+  .send.attach{background:rgba(255,255,255,.08); color:var(--text); box-shadow:none; width:38px; height:38px}
+  .pend{display:flex; flex-wrap:wrap; gap:6px; padding:0 14px}
+  .pend:empty{display:none}
+  .pend span{font-size:12px; background:rgba(255,255,255,.06); border:1px solid var(--line); border-radius:8px; padding:4px 9px; cursor:pointer}
+  .pend span:active{border-color:var(--accent)}
   .keyrow{display:flex; gap:8px; margin-top:12px}
   .keyrow input{flex:1; background:rgba(255,255,255,.04); border:1px solid var(--line); border-radius:999px; padding:10px 16px; color:var(--text); font-size:14px; outline:none; min-width:0}
   .keyrow input:focus{border-color:var(--accent)}
@@ -326,9 +331,12 @@
     <div class="chead"><span class="cdot"></span> Нейросеть Nemotron 550B &middot; Korg iS35</div>
     <div id="chatLog"></div>
     <div class="inbar">
+      <button id="attachBtn" class="send attach" type="button" title="Прикрепить файл или фото">&#128206;</button>
+      <input id="fileInput" type="file" multiple accept="*/*" hidden>
       <input id="chatInput" type="search" autocomplete="off" placeholder="Спроси что угодно, своими словами&#8230;">
       <button id="sendBtn" class="send" type="button">&#10148;</button>
     </div>
+    <div class="pend" id="pend"></div>
   </div>
   <div class="chips" id="chips"></div>
   <div class="newdlg" id="newDlg">&#10226; Новый диалог</div>
@@ -1071,6 +1079,48 @@ function getKey(){ return (localStorage.getItem("is35_orkey") || "").trim(); }
 
 function chpush(m){ CHIST.push(m); if (CHIST.length > 12) CHIST = CHIST.slice(-12); }
 
+let PEND = [];
+const MAXTXT = 12000;
+
+function shrink(dataUrl){
+  return new Promise(res => {
+    const im = new Image();
+    im.onload = () => {
+      const sc = Math.min(1, 1024 / Math.max(im.width, im.height));
+      const c = document.createElement("canvas");
+      c.width = Math.round(im.width * sc);
+      c.height = Math.round(im.height * sc);
+      c.getContext("2d").drawImage(im, 0, 0, c.width, c.height);
+      res(c.toDataURL("image/jpeg", 0.82));
+    };
+    im.onerror = () => res(dataUrl);
+    im.src = dataUrl;
+  });
+}
+
+function pendRender(){
+  const pd = document.getElementById("pend");
+  pd.innerHTML = "";
+  PEND.forEach((f, i) => {
+    const sp = document.createElement("span");
+    sp.textContent = (f.kind === "img" ? "\uD83D\uDDBC " : "\uD83D\uDCC4 ") + f.name + " \u2715";
+    sp.addEventListener("click", () => { PEND.splice(i, 1); pendRender(); });
+    pd.appendChild(sp);
+  });
+}
+
+function pendNamesHtml(){
+  if (!PEND.length) return "";
+  return '<div style="opacity:.75; font-size:12px; margin-top:4px">\uD83D\uDCCE ' + PEND.map(f => f.name).join(", ") + '</div>';
+}
+
+function buildMsg(q){
+  const imgs = PEND.filter(f => f.kind === "img");
+  const text = q + PEND.filter(f => f.kind === "text").map(f => "\n\n\uD83D\uDCCE \u0424\u0430\u0439\u043B \u00AB" + f.name + "\u00BB:\n" + f.text).join("");
+  if (!imgs.length) return text;
+  return [{type: "text", text: text}].concat(imgs.map(f => ({type: "image_url", image_url: {url: f.data}})));
+}
+
 function readSSE(r, onChunk){
   const dec = new TextDecoder();
   let buf = "", out = "";
@@ -1121,7 +1171,12 @@ function askNet(q, onChunk){
   const ok = setTimeout(() => netCtrl.abort(), 60000);
   const pull = () => { clearTimeout(ok); netCtrl = null; };
   const key = getKey();
-  const msgs = [{role: "system", content: NETSYS}].concat(CHIST.slice(0, -1)).concat([{role: "user", content: q}]);
+  const hasImg = PEND.some(f => f.kind === "img");
+  const cur = buildMsg(q);
+  const start = hasImg ? 1 : 0;
+  const msgs = [{role: "system", content: NETSYS}].concat(CHIST.slice(0, -1)).concat([{role: "user", content: cur}]);
+  PEND = [];
+  pendRender();
   return new Promise(res => {
     const log = [];
     const finish = t => { netLog = log.join(", "); pull(); res(t); };
@@ -1144,7 +1199,7 @@ function askNet(q, onChunk){
         run1(k + 1);
       });
     };
-    run1(0);
+    run1(start);
   });
 }
 
@@ -1245,9 +1300,9 @@ function suggest(){
 
 function ask(q){
   q = (q || "").trim();
-  if (!q) return;
-  chatLog.appendChild(el("div", {class:"chat u"}, q));
-  chpush({role: "user", content: q});
+  if (!q && !PEND.length) return;
+  chatLog.appendChild(el("div", {class:"chat u"}, (q || "\uD83D\uDCCE") + pendNamesHtml()));
+  chpush({role: "user", content: q || "[\u0444\u0430\u0439\u043B\u044B]"});
   chatInput.value = "";
   botAnswer(q);
 }
@@ -1270,7 +1325,7 @@ if (orKeyInput){
     setTimeout(() => { kb.textContent = "Сохранить"; }, 2000);
   });
 }
-document.getElementById("newDlg").addEventListener("click", () => { chatLog.innerHTML = ""; CHIST = []; greet(); suggest(); });
+document.getElementById("newDlg").addEventListener("click", () => { chatLog.innerHTML = ""; CHIST = []; PEND = []; pendRender(); greet(); suggest(); });
 chatLog.addEventListener("click", e => {
   const g = e.target.closest(".go");
   if (!g) return;
@@ -1278,6 +1333,21 @@ chatLog.addEventListener("click", e => {
   if (hit) goToDoc(hit);
 });
 chips.addEventListener("click", e => { if (e.target.matches("button")) ask(e.target.textContent); });
+const fileInput = document.getElementById("fileInput");
+document.getElementById("attachBtn").addEventListener("click", () => fileInput.click());
+fileInput.addEventListener("change", () => {
+  [...fileInput.files].slice(0, 4).forEach(f => {
+    const rd = new FileReader();
+    if (/^image\//.test(f.type)){
+      rd.onload = () => shrink(rd.result).then(d => { PEND.push({kind: "img", name: f.name, data: d}); pendRender(); });
+      rd.readAsDataURL(f);
+    } else {
+      rd.onload = () => { PEND.push({kind: "text", name: f.name, text: String(rd.result).slice(0, MAXTXT)}); pendRender(); };
+      rd.readAsText(f);
+    }
+  });
+  fileInput.value = "";
+});
 
 fab.addEventListener("click", () => {
   const btn = document.querySelector('#nav button[data-v="ai"]');
