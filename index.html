@@ -321,12 +321,17 @@
 </section>
 
 <section class="view" id="v-ai">
-  <p class="lead">Помощник работает на нейросети NVIDIA Nemotron 3 Ultra — 550 млрд параметров (55 млрд активных), открытая и без жёсткой цензуры, ответ печатается по мере генерации. Один раз вставь в поле ниже бесплатный ключ OpenRouter (регистрация на openrouter.ai — 2 минуты, карта не нужна) — дальше просто спрашивай о чём угодно своими словами. Совсем без интернета помощник переключается на встроенный поиск по руководству.</p>
+  <p class="lead">Помощник работает на нейросети NVIDIA Nemotron 3 Ultra — 550 млрд параметров (55 млрд активных), открытая и без жёсткой цензуры, ответ печатается по мере генерации. Один раз вставь в поле ниже бесплатный ключ OpenRouter (регистрация на openrouter.ai — 2 минуты, карта не нужна) — дальше просто спрашивай о чём угодно своими словами. Совсем без интернета помощник переключается на встроенный поиск по руководству. А для разнообразия — локальный режим: нейросеть на твоём компьютере (OpenJarvis, Ollama, LM Studio), поле для неё ниже.</p>
   <div class="keyrow">
     <input id="orKey" type="password" autocomplete="off" placeholder="Ключ OpenRouter (sk-or-…)">
     <button id="keyBtn" class="keybtn" type="button">Сохранить</button>
   </div>
   <p class="keyhint">Бесплатный ключ за 2 минуты: <a href="https://openrouter.ai/keys" target="_blank" rel="noopener">openrouter.ai &rarr; Sign up &rarr; Keys &rarr; Create key</a> — вставь его сюда, он сохранится только в этом устройстве.</p>
+  <div class="keyrow">
+    <input id="localUrl" type="text" autocomplete="off" placeholder="Локальный ИИ: OpenJarvis, Ollama, LM Studio (localhost:8000)">
+    <button id="localBtn" class="keybtn" type="button">Подключить</button>
+  </div>
+  <p class="keyhint">Разнообразие: локальные нейросети. <a href="https://github.com/open-jarvis/OpenJarvis" target="_blank" rel="noopener">OpenJarvis</a> — это бесплатная нейросеть-платформа, которая ставится на компьютер (вмонтировать её в сайт нельзя). Поставь её и запусти сервер, вставь адрес — чат начнёт с неё (без интернета, без лимитов, без ключа). Другие варианты: Ollama (localhost:11434), LM Studio (localhost:1234). Работает, когда сайт открыт в браузере того же компьютера; с телефона достучаться нельзя.</p>
   <div class="chatbox">
     <div class="chead"><span class="cdot"></span> Нейросеть Nemotron 550B &middot; Korg iS35</div>
     <div id="chatLog"></div>
@@ -1077,6 +1082,8 @@ const KEY_MSG = 'Один раз нужен бесплатный ключ, чт�
 
 function getKey(){ return (localStorage.getItem("is35_orkey") || "").trim(); }
 
+function getLocalUrl(){ return (localStorage.getItem("is35_localurl") || "").trim().replace(/\/+$/, ""); }
+
 function chpush(m){ CHIST.push(m); if (CHIST.length > 12) CHIST = CHIST.slice(-12); }
 
 let PEND = [];
@@ -1165,6 +1172,29 @@ function orChat(model, key, msgs, onChunk){
   });
 }
 
+function localChat(url, msgs, onChunk){
+  return fetch(url + "/v1/models")
+    .then(r => { if (!r.ok) throw "fail"; return r.json(); })
+    .then(j => {
+      const names = (((j || {}).data) || []).map(m => m.id).filter(Boolean);
+      if (!names.length) throw "fail";
+      return fetch(url + "/v1/chat/completions", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({model: names[0], messages: msgs, stream: true}),
+        signal: netCtrl.signal
+      });
+    })
+    .then(r => {
+      if (!r.ok || !r.body) throw "fail";
+      return readSSE(r, onChunk);
+    })
+    .then(out => {
+      if (!out || !out.trim()) throw "fail";
+      return out;
+    });
+}
+
 function askNet(q, onChunk){
   if (netCtrl) try { netCtrl.abort(); } catch(e){}
   netCtrl = new AbortController();
@@ -1199,7 +1229,14 @@ function askNet(q, onChunk){
         run1(k + 1);
       });
     };
-    run1(start);
+    const lurl = getLocalUrl();
+    const runLocal = () => {
+      if (!lurl){ run1(start); return; }
+      localChat(lurl, msgs, onChunk).then(t => {
+        finish(t);
+      }).catch(() => { log.push("jarvis:нет"); run1(start); });
+    };
+    runLocal();
   });
 }
 
@@ -1255,7 +1292,7 @@ function botAnswer(q){
     setTimeout(() => { bubble.innerHTML = small; suggest(); chatLog.scrollTop = chatLog.scrollHeight; }, 420);
     return;
   }
-  if (navigator.onLine && getKey()){
+  if (getLocalUrl() || (navigator.onLine && getKey())){
     askNet(q, txt => {
       bubble.innerHTML = fmtNet(txt);
       chatLog.scrollTop = chatLog.scrollHeight;
@@ -1276,7 +1313,7 @@ function botAnswer(q){
     });
     return;
   }
-  if (navigator.onLine && !getKey()){
+  if (navigator.onLine && !getKey() && !getLocalUrl()){
     bubble.innerHTML = KEY_MSG;
     const hits = searchAll(q);
     if (hits.length){
@@ -1323,6 +1360,17 @@ if (orKeyInput){
     const kb = document.getElementById("keyBtn");
     kb.textContent = "Готово ✓";
     setTimeout(() => { kb.textContent = "Сохранить"; }, 2000);
+  });
+}
+const localUrlInput = document.getElementById("localUrl");
+if (localUrlInput){
+  localUrlInput.value = getLocalUrl();
+  document.getElementById("localBtn").addEventListener("click", () => {
+    const v = localUrlInput.value.trim().replace(/\/+$/, "");
+    const lb = document.getElementById("localBtn");
+    if (v){ localStorage.setItem("is35_localurl", v); lb.textContent = "Готово \u2713"; }
+    else { localStorage.removeItem("is35_localurl"); lb.textContent = "Выкл \u2713"; }
+    setTimeout(() => { lb.textContent = "Подключить"; }, 2000);
   });
 }
 document.getElementById("newDlg").addEventListener("click", () => { chatLog.innerHTML = ""; CHIST = []; PEND = []; pendRender(); greet(); suggest(); });
