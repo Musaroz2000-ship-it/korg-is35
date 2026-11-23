@@ -110,6 +110,14 @@
   .inbar input::placeholder{color:var(--muted)}
   .send{flex:none; width:40px; height:40px; border:none; border-radius:50%; background:linear-gradient(135deg, var(--accent), #ffbd4f); color:#141414; font-size:16px; font-weight:700; cursor:pointer; display:grid; place-items:center; box-shadow:0 2px 10px rgba(245,166,35,.3)}
   .send:active{opacity:.75; transform:scale(.95)}
+  .keyrow{display:flex; gap:8px; margin-top:12px}
+  .keyrow input{flex:1; background:rgba(255,255,255,.04); border:1px solid var(--line); border-radius:999px; padding:10px 16px; color:var(--text); font-size:14px; outline:none; min-width:0}
+  .keyrow input:focus{border-color:var(--accent)}
+  .keyrow input::placeholder{color:var(--muted)}
+  .keybtn{flex:none; border:1px solid var(--accent2); color:var(--accent2); background:transparent; border-radius:999px; padding:10px 18px; font-size:13px; font-weight:600; cursor:pointer}
+  .keybtn:active{background:var(--accent2); color:#fff}
+  .keyhint{font-size:12.5px; color:var(--muted); margin:8px 2px 0; line-height:1.5}
+  .keyhint a{color:var(--accent2)}
   .typing{display:flex; gap:5px; padding:4px 0}
   .typing span{width:7px; height:7px; background:var(--muted); border-radius:50%; opacity:.35; animation:tp 1s infinite}
   .typing span:nth-child(2){animation-delay:.2s}
@@ -308,12 +316,17 @@
 </section>
 
 <section class="view" id="v-ai">
-  <p class="lead">Спрашивай о чём угодно своими словами — отвечает нейросеть на 117 млрд параметров. Приложение само выбирает самый свободный из пяти бесплатных серверов, ответ печатается по мере генерации. Совсем без интернета помощник переключается на встроенный поиск по руководству.</p>
+  <p class="lead">Помощник работает на нейросети Dolphin 3.0 Mistral 24B — открытая модель на 24 млрд параметров без цензуры. Один раз вставь в поле ниже бесплатный ключ OpenRouter (регистрация на openrouter.ai — 2 минуты) — дальше просто спрашивай о чём угодно своими словами, ответ печатается по мере генерации. Совсем без интернета помощник переключается на встроенный поиск по руководству.</p>
+  <div class="keyrow">
+    <input id="orKey" type="password" autocomplete="off" placeholder="Ключ OpenRouter (sk-or-…)">
+    <button id="keyBtn" class="keybtn" type="button">Сохранить</button>
+  </div>
+  <p class="keyhint">Бесплатный ключ за 2 минуты: <a href="https://openrouter.ai/keys" target="_blank" rel="noopener">openrouter.ai &rarr; Sign up &rarr; Keys &rarr; Create key</a> — вставь его сюда, он сохранится только в этом устройстве.</p>
   <div class="chatbox">
-    <div class="chead"><span class="cdot"></span> ИИ-помощник &middot; Korg iS35</div>
+    <div class="chead"><span class="cdot"></span> Dolphin 3.0 (24B) &middot; Korg iS35</div>
     <div id="chatLog"></div>
     <div class="inbar">
-      <input id="chatInput" type="search" autocomplete="off" placeholder="Спроси что угодно, своими словами…">
+      <input id="chatInput" type="search" autocomplete="off" placeholder="Спроси что угодно, своими словами&#8230;">
       <button id="sendBtn" class="send" type="button">&#10148;</button>
     </div>
   </div>
@@ -1021,7 +1034,7 @@ function smallTalk(q){
   const n = norm(q);
   if (/^(привет|здравств|хай|ку |доброе|добрый|здоров)/.test(n)) return "Привет! Спрашивай что угодно своими словами — я поищу по всему руководству и объясню просто: «не слышно клавиш», «хочу записать песню», «что значит Write»…";
   if (/с?пасибо|благодар|класс|круто|спс/.test(n)) return "Всегда рад! Заглядывай ещё — по iS35 вопросов не бывает глупых.";
-  if (/^(ты кто|кто ты|ты робот|ты ии|как тебя зовут)/.test(n)) return "Я нейросеть, живущая внутри этого приложения-гида. Работаю через пять бесплатных серверов и знаю всю базу руководства по iS35 — могу объяснить любую тему просто и по шагам.";
+  if (/^(ты кто|кто ты|ты робот|ты ии|как тебя зовут)/.test(n)) return "Я Dolphin — нейросеть на 24 млрд параметров (открытая модель без цензуры), живу внутри этого приложения-гида. Знаю всю базу руководства по iS35, объясняю любую тему просто и по шагам";
   return null;
 }
 
@@ -1046,15 +1059,14 @@ function fmtNet(t){
 }
 
 let netCtrl = null;
-let provNext = {};
+let orPause = 0;
 let netLog = "";
 
-const PROVS = [
-  {n: "blockrun", u: "https://blockrun.ai/v1/chat/completions", m: "openai/gpt-oss-120b", pause: 5000, busy: 20000},
-  {n: "blockrun2", u: "https://blockrun.ai/api/v1/chat/completions", m: "openai/gpt-oss-120b", pause: 5000, busy: 20000},
-  {n: "ovh", u: "https://oai.endpoints.kepler.ai.cloud.ovh.net/v1/chat/completions", m: "gpt-oss-120b", pause: 32000, busy: 32000},
-  {n: "pollinations", u: "https://text.pollinations.ai/openai", m: null, pause: 46000, busy: 46000}
-];
+const OR_URL = "https://openrouter.ai/api/v1/chat/completions";
+const OR_MODELS = ["cognitivecomputations/dolphin3.0-mistral-24b:free", "cognitivecomputations/dolphin3.0-r1-mistral-24b:free"];
+const KEY_MSG = 'Один раз нужен бесплатный ключ, чтобы работал Dolphin:<br>(1) зайди на <a href="https://openrouter.ai/keys" target="_blank" rel="noopener">openrouter.ai/keys</a> и зарегистрируйся — это 2 минуты;<br>(2) нажми «Create key» и скопируй ключ (начинается с sk-or-);<br>(3) вставь его в поле над чатом и нажми «Сохранить».<br>Ключ хранится только в твоём устройстве. А пока — вот что нашлось по твоему вопросу в руководстве:';
+
+function getKey(){ return (localStorage.getItem("is35_orkey") || "").trim(); }
 
 function readSSE(r, onChunk){
   const dec = new TextDecoder();
@@ -1082,18 +1094,22 @@ function readSSE(r, onChunk){
   });
 }
 
-function postChat(url, model, q, onChunk){
-  const body = {messages: [{role: "system", content: NETSYS}, {role: "user", content: q}], stream: true};
-  if (model) body.model = model;
-  return fetch(url, {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body), signal: netCtrl.signal})
-    .then(r => {
-      if (r.status === 402 || r.status === 429) throw "busy";
-      if (r.status < 200 || r.status >= 300 || !r.body) throw "fail";
-      return readSSE(r, onChunk);
-    }).then(out => {
-      if (!out || !out.trim()) throw "fail";
-      return out;
-    });
+function orChat(model, key, q, onChunk){
+  const body = {model: model, messages: [{role: "system", content: NETSYS}, {role: "user", content: q}], stream: true};
+  return fetch(OR_URL, {
+    method: "POST",
+    headers: {"Content-Type": "application/json", "Authorization": "Bearer " + key},
+    body: JSON.stringify(body),
+    signal: netCtrl.signal
+  }).then(r => {
+    if (r.status === 429 || r.status === 402) throw "busy";
+    if (r.status === 401 || r.status === 403) throw "key";
+    if (r.status < 200 || r.status >= 300 || !r.body) throw "fail";
+    return readSSE(r, onChunk);
+  }).then(out => {
+    if (!out || !out.trim()) throw "fail";
+    return out;
+  });
 }
 
 function askNet(q, onChunk){
@@ -1101,6 +1117,7 @@ function askNet(q, onChunk){
   netCtrl = new AbortController();
   const ok = setTimeout(() => netCtrl.abort(), 60000);
   const pull = () => { clearTimeout(ok); netCtrl = null; };
+  const key = getKey();
   return new Promise(res => {
     const log = [];
     const finish = t => { netLog = log.join(", "); pull(); res(t); };
@@ -1110,14 +1127,16 @@ function askNet(q, onChunk){
       hordeAsk(q, () => { clearTimeout(ok2); finish(null); }, t => { clearTimeout(ok2); finish(t); });
     };
     const run1 = k => {
-      if (k >= PROVS.length){ runHorde(); return; }
-      const pv = PROVS[k];
-      if (Date.now() < (provNext[pv.n] || 0)){ log.push(pv.n + ":пауза"); run1(k + 1); return; }
-      postChat(pv.u, pv.m, q, onChunk).then(t => {
-        provNext[pv.n] = Date.now() + pv.pause; finish(t);
+      if (!key){ log.push("нет ключа"); runHorde(); return; }
+      if (!navigator.onLine || Date.now() < orPause){ log.push("dolphin:пауза"); runHorde(); return; }
+      if (k >= OR_MODELS.length){ runHorde(); return; }
+      orChat(OR_MODELS[k], key, q, onChunk).then(t => {
+        orPause = Date.now() + 4000;
+        finish(t);
       }).catch(reason => {
-        provNext[pv.n] = Date.now() + (reason === "busy" ? pv.busy : 5000);
-        log.push(pv.n + ":" + (reason === "busy" ? "занят" : "недоступен"));
+        log.push((k === 0 ? "dolphin3.0" : "r1") + ":" + reason);
+        if (reason === "busy"){ orPause = Date.now() + 120000; runHorde(); return; }
+        if (reason === "key"){ orPause = Date.now() + 60000; runHorde(); return; }
         run1(k + 1);
       });
     };
@@ -1177,15 +1196,17 @@ function botAnswer(q){
     setTimeout(() => { bubble.innerHTML = small; suggest(); chatLog.scrollTop = chatLog.scrollHeight; }, 420);
     return;
   }
-  const useNet = !!navigator.onLine;
-  if (useNet){
+  if (navigator.onLine && getKey()){
     askNet(q, txt => {
       bubble.innerHTML = fmtNet(txt);
       chatLog.scrollTop = chatLog.scrollHeight;
     }).then(t => {
       if (!t){
-        offlineAnswer(bubble, q);
-        bubble.insertAdjacentHTML("beforeend", '<div class="more">Бесплатные нейросерверы сейчас не ответили (могут быть заняты у всех). Это ответ офлайн-поиска. Попробуй ещё раз через минуту или две — обычно проходит.<br><span style=\"opacity:.7\">Тех: ' + (netLog || "причин нет — всё на паузе") + '</span></div>');
+        const sub = el("div", {class:"more"});
+        bubble.innerHTML = 'Dolphin сейчас не ответила — сервер OpenRouter бывает занят. Это ответ офлайн-поиска. Попробуй ещё раз через пару минут — обычно проходит.<br><span style="opacity:.7">Тех: ' + (netLog || "причин нет") + '</span>';
+        bubble.appendChild(sub);
+        const hits = searchAll(q);
+        if (hits.length) renderAnswer(sub, hits);
         chatLog.scrollTop = chatLog.scrollHeight;
         return;
       }
@@ -1193,6 +1214,18 @@ function botAnswer(q){
       suggest();
       chatLog.scrollTop = chatLog.scrollHeight;
     });
+    return;
+  }
+  if (navigator.onLine && !getKey()){
+    bubble.innerHTML = KEY_MSG;
+    const hits = searchAll(q);
+    if (hits.length){
+      const sub = el("div", {class:"more"});
+      bubble.appendChild(sub);
+      renderAnswer(sub, hits);
+    }
+    suggest();
+    chatLog.scrollTop = chatLog.scrollHeight;
     return;
   }
   setTimeout(() => offlineAnswer(bubble, q), 420);
@@ -1214,11 +1247,23 @@ function ask(q){
 }
 
 function greet(){
-  chatLog.appendChild(el("div", {class:"chat b"}, "Привет! Я помощник по iS35 — живая нейросеть на 117 млрд параметров. Приложение само выбирает самый свободный из пяти бесплатных серверов, поэтому отвечаю быстро и на любую тему, своими словами. Спроси хоть «нет звука», хоть «как записать песню», хоть «что значит Write». Где-то раз в час серверы устают — тогда подхвачу офлайн-поиском по руководству."));
+  chatLog.appendChild(el("div", {class:"chat b"}, "Привет! Я Dolphin — нейросеть на 24 млрд параметров без цензуры, встроенная в этот гид. Отвечаю на любую тему своими словами: спроси хоть «нет звука», хоть «как записать песню», хоть «что значит write». Для работы нужен один раз бесплатный ключ OpenRouter — поле для него над чатом. Если сервер занят или ты без интернета — подхвачу офлайн-поиском по руководству."));
 }
 
 chatInput.addEventListener("keydown", e => { if (e.key === "Enter") ask(chatInput.value); });
 document.getElementById("sendBtn").addEventListener("click", () => ask(chatInput.value));
+const orKeyInput = document.getElementById("orKey");
+if (orKeyInput){
+  orKeyInput.value = getKey();
+  document.getElementById("keyBtn").addEventListener("click", () => {
+    const v = orKeyInput.value.trim();
+    if (!v){ orKeyInput.focus(); return; }
+    localStorage.setItem("is35_orkey", v);
+    const kb = document.getElementById("keyBtn");
+    kb.textContent = "Готово ✓";
+    setTimeout(() => { kb.textContent = "Сохранить"; }, 2000);
+  });
+}
 document.getElementById("newDlg").addEventListener("click", () => { chatLog.innerHTML = ""; greet(); suggest(); });
 chatLog.addEventListener("click", e => {
   const g = e.target.closest(".go");
