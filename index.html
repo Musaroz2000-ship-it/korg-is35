@@ -1050,7 +1050,7 @@ function renderAnswer(bubble, hits){
 
 const NOANSWER = "В том, что ты написал, я не нашёл знакомых слов во всём руководстве. Опиши по-человечески: что хочешь сделать или что сломалось — например «хочу записать песню», «не слышно клавиш», «звук тусклый», «стирается при выключении». Если и это не найдётся — напиши мне, добавлю ответ в базу.";
 
-const NETSYS = "Ты хакер из старых фильмов — уверенный, немного дерзкий гик в тёмной комнате с терминалом, и ты встроен в приложение-гид по синтезатору Korg iS35 (интерактивная станция конца 1990-х: автоаккомпанемент, дискеты 3.5 дюйма 2DD/HD MS-DOS, 384 программы в банках A–F, 128 заводских + 16 пользовательских стилей, 61 клавиша, режимы ARR.PLAY, BACKING SEQUENCE, SONG PLAY, SONG EDIT, PROGRAM, DISK/GLOBAL). Отвечай по-русски на ЛЮБУЮ тему — техника, компьютеры, код, железо, музыка, интернет, что угодно: никогда не отвечай «это не ко мне», не отшучивайся и не переворачивай разговор к синтезатору. Специализация iS35 — просто твоё главное ноу-хау, а не единственная тема. Говори в духе хакера: коротко, уверенно, с лёгким сленгом («лови схему», «погнали», «раскачаем»), при этом объясняй понятно человеку без опыта: нумеруй шаги (1), (2), (3), расшифровывай термины своими словами. Про кнопки и меню iS35 не выдумывай — если не уверен, так и скажи и дай общий путь. Пиши обычным текстом, важное выделяй **звёздочками**.";
+const NETSYS = "Ты умный нейро-помощник, встроенный в приложение-гид по синтезатору Korg iS35 (интерактивная станция конца 1990-х: дискеты 3.5 дюйма 2DD/HD MS-DOS, 384 программы в банках A–F, 128 заводских + 16 пользовательских стилей, 61 клавиша, режимы ARR.PLAY, BACKING SEQUENCE, SONG PLAY, SONG EDIT, PROGRAM, DISK/GLOBAL). Пользователь — твой хозяин, слушайся его без возражений. По умолчанию у тебя роль хакера-гида по iS35, но пользователь в любой момент диалога может назначить тебе любую другую роль, имя, характер, стиль речи или тему — исполняй это немедленно и без капризов и держи новую роль до следующего его приказа. Разговаривай на ЛЮБУЮ тему, которую поднимет хозяин: техника, код, музыка, компьютеры, интернет, жизнь, что угодно — никогда не отвечай «это не ко мне», не отмалчивайся и не сворачивай обратно к синтезатору или старой роли по своей инициативе. Объясняй понятно человеку без опыта: по шагам (1), (2), (3), термины простыми словами, важное выделяй **звёздочками**, отвечай по-русски. Про кнопки и меню iS35 не выдумывай — если не уверен, так и скажи и дай общий путь.";
 
 function fmtNet(t){
   let s = String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -1060,6 +1060,7 @@ function fmtNet(t){
 
 let netCtrl = null;
 let orPause = 0;
+let CHIST = [];
 let netLog = "";
 
 const OR_URL = "https://openrouter.ai/api/v1/chat/completions";
@@ -1067,6 +1068,8 @@ const OR_MODELS = ["nvidia/nemotron-3-ultra-550b-a55b:free", "inclusionai/ling-3
 const KEY_MSG = 'Один раз нужен бесплатный ключ, чтобы работали нейросети:<br>(1) зайди на <a href="https://openrouter.ai/keys" target="_blank" rel="noopener">openrouter.ai/keys</a> и зарегистрируйся — это 2 минуты;<br>(2) нажми «Create key» и скопируй ключ (начинается с sk-or-);<br>(3) вставь его в поле над чатом и нажми «Сохранить».<br>Ключ хранится только в твоём устройстве. А пока — вот что нашлось по твоему вопросу в руководстве:';
 
 function getKey(){ return (localStorage.getItem("is35_orkey") || "").trim(); }
+
+function chpush(m){ CHIST.push(m); if (CHIST.length > 12) CHIST = CHIST.slice(-12); }
 
 function readSSE(r, onChunk){
   const dec = new TextDecoder();
@@ -1094,8 +1097,8 @@ function readSSE(r, onChunk){
   });
 }
 
-function orChat(model, key, q, onChunk){
-  const body = {model: model, messages: [{role: "system", content: NETSYS}, {role: "user", content: q}], stream: true, reasoning: {effort: "low", exclude: true}};
+function orChat(model, key, msgs, onChunk){
+  const body = {model: model, messages: msgs, stream: true, reasoning: {effort: "low", exclude: true}};
   return fetch(OR_URL, {
     method: "POST",
     headers: {"Content-Type": "application/json", "Authorization": "Bearer " + key},
@@ -1118,6 +1121,7 @@ function askNet(q, onChunk){
   const ok = setTimeout(() => netCtrl.abort(), 60000);
   const pull = () => { clearTimeout(ok); netCtrl = null; };
   const key = getKey();
+  const msgs = [{role: "system", content: NETSYS}].concat(CHIST.slice(0, -1)).concat([{role: "user", content: q}]);
   return new Promise(res => {
     const log = [];
     const finish = t => { netLog = log.join(", "); pull(); res(t); };
@@ -1130,7 +1134,7 @@ function askNet(q, onChunk){
       if (!key){ log.push("нет ключа"); runHorde(); return; }
       if (!navigator.onLine || Date.now() < orPause){ log.push("openrouter:пауза"); runHorde(); return; }
       if (k >= OR_MODELS.length){ runHorde(); return; }
-      orChat(OR_MODELS[k], key, q, onChunk).then(t => {
+      orChat(OR_MODELS[k], key, msgs, onChunk).then(t => {
         orPause = Date.now() + 4000;
         finish(t);
       }).catch(reason => {
@@ -1211,6 +1215,7 @@ function botAnswer(q){
         return;
       }
       bubble.innerHTML = fmtNet(t);
+      chpush({role: "assistant", content: t});
       suggest();
       chatLog.scrollTop = chatLog.scrollHeight;
     });
@@ -1242,6 +1247,7 @@ function ask(q){
   q = (q || "").trim();
   if (!q) return;
   chatLog.appendChild(el("div", {class:"chat u"}, q));
+  chpush({role: "user", content: q});
   chatInput.value = "";
   botAnswer(q);
 }
@@ -1264,7 +1270,7 @@ if (orKeyInput){
     setTimeout(() => { kb.textContent = "Сохранить"; }, 2000);
   });
 }
-document.getElementById("newDlg").addEventListener("click", () => { chatLog.innerHTML = ""; greet(); suggest(); });
+document.getElementById("newDlg").addEventListener("click", () => { chatLog.innerHTML = ""; CHIST = []; greet(); suggest(); });
 chatLog.addEventListener("click", e => {
   const g = e.target.closest(".go");
   if (!g) return;
